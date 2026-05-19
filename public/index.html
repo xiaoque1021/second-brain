@@ -1756,7 +1756,6 @@
           <label class="token-label"><span data-i18n="tokenName">名称</span><input class="token-input" id="token-name" type="text"></label>
           <label class="token-label"><span data-i18n="tokenRole">角色</span><select class="token-select" id="token-role"><option value="writer">writer</option><option value="admin">admin</option><option value="reader">reader</option></select></label>
           <label class="token-label"><span data-i18n="tokenNamespaces">命名空间</span><input class="token-input" id="token-namespaces" type="text" placeholder="default, work"></label>
-          <label class="token-label"><span data-i18n="tokenExpires">过期时间</span><input class="token-input" id="token-expires" type="datetime-local"></label>
           <div class="token-form-actions">
             <button class="btn-token" type="button" onclick="closeTokenForm()" data-i18n="cancel">取消</button>
             <button class="btn-token primary" type="button" onclick="saveToken()" id="token-save-btn" data-i18n="saveToken">保存 Token</button>
@@ -1834,7 +1833,6 @@
         tokenName: '名称',
         tokenRole: '角色',
         tokenNamespaces: '命名空间',
-        tokenExpires: '过期时间',
         saveToken: '保存 Token',
         tokenCreated: token => `只显示一次：${token}`,
         tokenSaved: 'Token 已保存。',
@@ -1923,7 +1921,6 @@
         tokenName: 'Name',
         tokenRole: 'Role',
         tokenNamespaces: 'Namespaces',
-        tokenExpires: 'Expires',
         saveToken: 'Save Token',
         tokenCreated: token => `Shown once: ${token}`,
         tokenSaved: 'Token saved.',
@@ -2094,6 +2091,9 @@
         if (!res.ok) throw new Error();
         currentIdentity = await res.json();
         availableNamespaces = currentIdentity.namespaces || currentIdentity.allowedNamespaces || currentIdentity.writeNamespaces || [];
+        if (isAdmin() && (currentIdentity.readNamespaces || []).includes('*')) {
+          availableNamespaces = Array.from(new Set([currentIdentity.defaultNamespace || 'default', currentNamespace || '', ...availableNamespaces, 'default', 'shared', 'codex', 'claude-code', 'mobile'].filter(Boolean)));
+        }
         if (!availableNamespaces.length && currentIdentity.namespace) availableNamespaces = [currentIdentity.namespace];
         if (!currentNamespace) currentNamespace = currentIdentity.defaultNamespace || currentIdentity.namespace || availableNamespaces[0] || 'default';
         if (!availableNamespaces.includes(currentNamespace)) availableNamespaces.unshift(currentNamespace);
@@ -2556,13 +2556,12 @@
         const card = document.createElement('div');
         card.className = 'token-card';
         const namespaces = token.namespaces || token.allowedNamespaces || [];
-        const expires = token.expiresAt || token.expires_at || token.expires || '';
         const revoked = token.revoked || token.revokedAt || token.revoked_at;
         card.innerHTML = `
           <div class="token-card-head">
             <div>
               <div class="token-name">${escHtml(token.name || token.id || 'token')}</div>
-              <div class="token-meta">${escHtml(token.role || 'writer')} / ${escHtml(namespaces.join(', ') || '*')} / ${expires ? escHtml(formatDateTime(expires)) : t('neverExpires')}</div>
+              <div class="token-meta">${escHtml(token.role || 'writer')} / ${escHtml(namespaces.join(', ') || '*')}</div>
             </div>
             ${revoked ? `<span class="token-pill">${t('revoked')}</span>` : ''}
           </div>
@@ -2581,7 +2580,6 @@
       document.getElementById('token-name').value = token?.name || '';
       document.getElementById('token-role').value = token?.role || 'writer';
       document.getElementById('token-namespaces').value = (token?.namespaces || token?.allowedNamespaces || [currentNamespace || 'default']).join(', ');
-      document.getElementById('token-expires').value = toDateTimeLocal(token?.expiresAt || token?.expires_at || '');
       document.getElementById('token-output').classList.remove('open');
       form.classList.add('open');
     }
@@ -2595,12 +2593,10 @@
       const id = document.getElementById('token-edit-id').value;
       const btn = document.getElementById('token-save-btn');
       const namespaces = document.getElementById('token-namespaces').value.split(',').map(s => s.trim()).filter(Boolean);
-      const expiresAt = document.getElementById('token-expires').value;
       const payload = {
         name: document.getElementById('token-name').value.trim(),
         role: document.getElementById('token-role').value,
-        namespaces,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
+        namespaces
       };
       btn.disabled = true; btn.textContent = t('saving');
       try {
@@ -2664,14 +2660,6 @@
 
     function formatDateTime(value) {
       try { return new Date(value).toLocaleString(t('locale'), { dateStyle: 'medium', timeStyle: 'short' }); } catch { return value; }
-    }
-
-    function toDateTimeLocal(value) {
-      if (!value) return '';
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return '';
-      const pad = n => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
     function openMenu() { document.getElementById('menu-sheet').classList.add('open'); }
