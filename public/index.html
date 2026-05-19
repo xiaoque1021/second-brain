@@ -1519,12 +1519,12 @@
       <p id="auth-subtitle" data-i18n="authSubtitle">输入 Bearer token，连接你的个人记忆层。</p>
       <form id="auth-login-form" class="field-group auth-mode active" onsubmit="connect(); return false;">
         <input type="text" name="username" value="user" autocomplete="username" style="display:none">
-        <input type="url" id="auth-url" autocomplete="off" autocapitalize="none">
+        <input type="url" id="auth-url" autocomplete="off" autocapitalize="none" hidden>
         <input type="password" id="auth-token" data-i18n-placeholder="bearerToken" placeholder="Bearer token" autocomplete="current-password">
         <button id="auth-connect" type="submit" data-i18n="connect">连接</button>
       </form>
       <form id="auth-setup-form" class="field-group auth-mode" onsubmit="setupFirstRun(); return false;">
-        <input type="url" id="setup-url" autocomplete="off" autocapitalize="none">
+        <input type="url" id="setup-url" autocomplete="off" autocapitalize="none" hidden>
         <input type="text" id="setup-name" data-i18n-placeholder="setupNamePlaceholder" autocomplete="name">
         <input type="password" id="setup-token" data-i18n-placeholder="setupTokenPlaceholder" autocomplete="new-password">
         <input type="text" id="setup-namespace" data-i18n-placeholder="namespacePlaceholder" autocomplete="off" autocapitalize="none">
@@ -2032,7 +2032,7 @@
     }
 
     async function setupFirstRun() {
-      const url = document.getElementById('setup-url').value.trim().replace(/\/$/, '');
+      const url = (document.getElementById('setup-url').value.trim() || window.location.origin).replace(/\/$/, '');
       const name = document.getElementById('setup-name').value.trim();
       const token = document.getElementById('setup-token').value.trim();
       const namespace = document.getElementById('setup-namespace').value.trim() || 'default';
@@ -2061,7 +2061,7 @@
     }
 
     async function connect() {
-      const url = document.getElementById('auth-url').value.trim().replace(/\/$/, '');
+      const url = (document.getElementById('auth-url').value.trim() || window.location.origin).replace(/\/$/, '');
       const tok = document.getElementById('auth-token').value.trim();
       const err = document.getElementById('auth-error');
       const btn = document.getElementById('auth-connect');
