@@ -28,7 +28,7 @@ const TOKEN_PREFIX = "sb_";
 const TOKEN_BYTES = 32;
 const NS_RE = /^(default|shared|codex|claude-code|mobile|project:[a-zA-Z0-9_-]+|[a-zA-Z0-9_-]{1,64})$/;
 
-type Role = "admin" | "user";
+type Role = "admin" | "user" | "reader" | "writer";
 
 interface TokenRow {
   id: string;
@@ -177,25 +177,11 @@ function generateToken(): string {
 }
 
 async function deriveTokenKey(adminToken: string, tokenHash: string): Promise<CryptoKey> {
-  const material = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(adminToken),
-    "PBKDF2",
-    false,
-    ["deriveKey"],
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`second-brain-token:${adminToken}:${tokenHash}`),
   );
-  return crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: new TextEncoder().encode(`second-brain-token:${tokenHash}`),
-      iterations: 120000,
-      hash: "SHA-256",
-    },
-    material,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
+  return crypto.subtle.importKey("raw", digest, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
 async function encryptTokenForAdmin(token: string, adminToken: string, tokenHash: string): Promise<string> {
@@ -284,7 +270,7 @@ function rowToAuthContext(row: TokenRow, token: string, tokenHash: string): Auth
     tokenHash,
     tokenId: row.id,
     label: row.label,
-    role: row.role === "admin" ? "admin" : "user",
+    role: row.role === "admin" ? "admin" : row.role === "reader" ? "reader" : row.role === "writer" ? "writer" : "user",
     defaultNamespace: row.default_namespace || DEFAULT_NAMESPACE,
     readNamespaces: row.role === "admin" ? [ALL_NAMESPACES] : read,
     writeNamespaces: row.role === "admin" ? [ALL_NAMESPACES] : write,
@@ -386,8 +372,11 @@ async function checkDuplicate(content: string, env: Env, namespace: string): Pro
   const results = await env.VECTORIZE.query(values, { topK: 1, returnMetadata: "all", namespace } as any);
   if (!results.matches.length) return { status: "unique" };
   const top = results.matches[0];
+  const metadata = (top.metadata as any) || {};
+  const metadataNamespace = String(metadata.namespace || namespace);
+  if (metadataNamespace !== namespace) return { status: "unique" };
   const score = top.score;
-  const matchId = (top.metadata as any)?.parentId ?? top.id;
+  const matchId = metadata.parentId ?? metadata.entryId ?? top.id;
   if (score >= DUPLICATE_BLOCK_THRESHOLD) return { status: "blocked", matchId, score };
   if (score >= DUPLICATE_FLAG_THRESHOLD) return { status: "flagged", matchId, score };
   return { status: "unique" };
@@ -470,6 +459,15 @@ async function readableNamespaces(env: Env, ctx: AuthContext, requestedNamespace
   const { results } = await env.DB.prepare(`SELECT DISTINCT namespace FROM entries ORDER BY namespace`).all();
   const namespaces = (results as Record<string, any>[]).map((row) => String(row.namespace || DEFAULT_NAMESPACE));
   return namespaces.length ? namespaces : [ctx.defaultNamespace];
+}
+
+async function requireReadableNamespaces(env: Env, ctx: AuthContext, requestedNamespace?: string | null): Promise<string[] | Response> {
+  if (requestedNamespace) {
+    const namespace = normalizeNamespace(requestedNamespace, ctx.defaultNamespace);
+    if (!namespaceAllowed(namespace, ctx.readNamespaces)) return forbidden(`No read access to namespace: ${namespace}`);
+    return [namespace];
+  }
+  return readableNamespaces(env, ctx, requestedNamespace);
 }
 
 async function recallEntries(env: Env, ctx: AuthContext, query: string, topK: number, tag?: string, requestedNamespace?: string | null): Promise<RecallEntry[]> {
@@ -676,17 +674,17 @@ async function createToken(env: Env, ctx: AuthContext, body: any, role: Role = "
   const tokenHash = await sha256Hex(token);
   const frontNamespaces = body.namespaces || body.allowedNamespaces;
   const defaultNamespace = normalizeNamespace(body.defaultNamespace || body.default_namespace || body.namespace || frontNamespaces?.[0], DEFAULT_NAMESPACE);
-  const frontRole = body.role === "reader" ? "reader" : body.role === "writer" ? "writer" : role;
-  const read = role === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.readNamespaces || body.read_namespaces || frontNamespaces, [defaultNamespace]);
-  const write = role === "admin" ? [ALL_NAMESPACES] : frontRole === "reader" ? [] : normalizeNamespaceList(body.writeNamespaces || body.write_namespaces || frontNamespaces, [defaultNamespace]);
-  const del = role === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.deleteNamespaces || body.delete_namespaces, []);
+  const finalRole: Role = body.role === "admin" ? "admin" : body.role === "reader" ? "reader" : body.role === "writer" ? "writer" : role;
+  const read = finalRole === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.readNamespaces || body.read_namespaces || frontNamespaces, [defaultNamespace]);
+  const write = finalRole === "admin" ? [ALL_NAMESPACES] : finalRole === "reader" ? [] : normalizeNamespaceList(body.writeNamespaces || body.write_namespaces || frontNamespaces, [defaultNamespace]);
+  const del = finalRole === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.deleteNamespaces || body.delete_namespaces, []);
   const cipher = await encryptTokenForAdmin(token, ctx.token, tokenHash);
   const id = crypto.randomUUID();
   const now = Date.now();
   await env.DB.prepare(
     `INSERT INTO auth_tokens (id, label, token_hash, token_ciphertext, role, default_namespace, read_namespaces, write_namespaces, delete_namespaces, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, String(body.label || body.name || "New Token"), tokenHash, cipher, role, defaultNamespace, JSON.stringify(read), JSON.stringify(write), JSON.stringify(del), now).run();
-  const record = { id, name: body.label || body.name || "New Token", label: body.label || body.name || "New Token", role, defaultNamespace, namespace: defaultNamespace, namespaces: Array.from(new Set([...read, ...write, ...del])), readNamespaces: read, writeNamespaces: write, deleteNamespaces: del, createdAt: now, expiresAt: null, revoked: false };
+  ).bind(id, String(body.label || body.name || "New Token"), tokenHash, cipher, finalRole, defaultNamespace, JSON.stringify(read), JSON.stringify(write), JSON.stringify(del), now).run();
+  const record = { id, name: body.label || body.name || "New Token", label: body.label || body.name || "New Token", role: finalRole, defaultNamespace, namespace: defaultNamespace, namespaces: Array.from(new Set([...read, ...write, ...del])), readNamespaces: read, writeNamespaces: write, deleteNamespaces: del, createdAt: now, expiresAt: null, revoked: false };
   return json({ ...record, token, tokenRecord: record }, 201);
 }
 
@@ -695,10 +693,9 @@ async function updateToken(env: Env, id: string, body: any): Promise<Response> {
   if (!existing) return json({ error: "Token not found" }, 404);
   const frontNamespaces = body.namespaces || body.allowedNamespaces;
   const defaultNamespace = normalizeNamespace(body.defaultNamespace || body.default_namespace || body.namespace || frontNamespaces?.[0], existing.default_namespace);
-  const role = body.role === "admin" ? "admin" : "user";
-  const frontRole = body.role === "reader" ? "reader" : body.role === "writer" ? "writer" : role;
+  const role: Role = body.role === "admin" ? "admin" : body.role === "reader" ? "reader" : body.role === "writer" ? "writer" : "user";
   const read = role === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.readNamespaces || body.read_namespaces || frontNamespaces, parseJsonArray(existing.read_namespaces, [defaultNamespace]));
-  const write = role === "admin" ? [ALL_NAMESPACES] : frontRole === "reader" ? [] : normalizeNamespaceList(body.writeNamespaces || body.write_namespaces || frontNamespaces, parseJsonArray(existing.write_namespaces, [defaultNamespace]));
+  const write = role === "admin" ? [ALL_NAMESPACES] : role === "reader" ? [] : normalizeNamespaceList(body.writeNamespaces || body.write_namespaces || frontNamespaces, parseJsonArray(existing.write_namespaces, [defaultNamespace]));
   const del = role === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.deleteNamespaces || body.delete_namespaces, parseJsonArray(existing.delete_namespaces, []));
   await env.DB.prepare(
     `UPDATE auth_tokens SET label = ?, role = ?, default_namespace = ?, read_namespaces = ?, write_namespaces = ?, delete_namespaces = ? WHERE id = ?`
@@ -819,6 +816,8 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
   }
 
   if (url.pathname === "/tags" && request.method === "GET") {
+    const requested = await requireReadableNamespaces(env, auth, url.searchParams.get("namespace"));
+    if (requested instanceof Response) return requested;
     const rows = await listEntries(env, auth, 1000, undefined, url.searchParams.get("namespace"));
     const tags = new Set<string>();
     rows.forEach((row) => parseJsonArray(row.tags as string).forEach((tag) => tags.add(tag)));
@@ -826,6 +825,8 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
   }
 
   if (url.pathname === "/list" && request.method === "GET") {
+    const requested = await requireReadableNamespaces(env, auth, url.searchParams.get("namespace"));
+    if (requested instanceof Response) return requested;
     const n = Math.min(parseInt(url.searchParams.get("n") ?? "20", 10), 100);
     const tag = url.searchParams.get("tag") || undefined;
     return json(await listEntries(env, auth, n, tag, url.searchParams.get("namespace")));

@@ -1755,7 +1755,10 @@
           <input type="hidden" id="token-edit-id">
           <label class="token-label"><span data-i18n="tokenName">名称</span><input class="token-input" id="token-name" type="text"></label>
           <label class="token-label"><span data-i18n="tokenRole">角色</span><select class="token-select" id="token-role"><option value="writer">writer</option><option value="admin">admin</option><option value="reader">reader</option></select></label>
-          <label class="token-label"><span data-i18n="tokenNamespaces">命名空间</span><input class="token-input" id="token-namespaces" type="text" placeholder="default, work"></label>
+          <label class="token-label"><span data-i18n="tokenDefaultNamespace">默认命名空间</span><input class="token-input" id="token-default-namespace" type="text" placeholder="codex"></label>
+          <label class="token-label"><span data-i18n="tokenReadNamespaces">可读命名空间</span><input class="token-input" id="token-read-namespaces" type="text" placeholder="codex, shared, project:*"></label>
+          <label class="token-label"><span data-i18n="tokenWriteNamespaces">可写命名空间</span><input class="token-input" id="token-write-namespaces" type="text" placeholder="codex, project:*"></label>
+          <label class="token-label"><span data-i18n="tokenDeleteNamespaces">可删命名空间</span><input class="token-input" id="token-delete-namespaces" type="text" placeholder="codex"></label>
           <div class="token-form-actions">
             <button class="btn-token" type="button" onclick="closeTokenForm()" data-i18n="cancel">取消</button>
             <button class="btn-token primary" type="button" onclick="saveToken()" id="token-save-btn" data-i18n="saveToken">保存 Token</button>
@@ -1833,6 +1836,10 @@
         tokenName: '名称',
         tokenRole: '角色',
         tokenNamespaces: '命名空间',
+        tokenDefaultNamespace: '默认命名空间',
+        tokenReadNamespaces: '可读命名空间',
+        tokenWriteNamespaces: '可写命名空间',
+        tokenDeleteNamespaces: '可删命名空间',
         saveToken: '保存 Token',
         tokenCreated: token => `只显示一次：${token}`,
         tokenSaved: 'Token 已保存。',
@@ -1921,6 +1928,10 @@
         tokenName: 'Name',
         tokenRole: 'Role',
         tokenNamespaces: 'Namespaces',
+        tokenDefaultNamespace: 'Default namespace',
+        tokenReadNamespaces: 'Read namespaces',
+        tokenWriteNamespaces: 'Write namespaces',
+        tokenDeleteNamespaces: 'Delete namespaces',
         saveToken: 'Save Token',
         tokenCreated: token => `Shown once: ${token}`,
         tokenSaved: 'Token saved.',
@@ -2555,13 +2566,16 @@
       adminTokens.forEach(token => {
         const card = document.createElement('div');
         card.className = 'token-card';
-        const namespaces = token.namespaces || token.allowedNamespaces || [];
+        const defaultNamespace = token.defaultNamespace || token.namespace || 'default';
+        const read = token.readNamespaces || token.namespaces || token.allowedNamespaces || [];
+        const write = token.writeNamespaces || [];
+        const del = token.deleteNamespaces || [];
         const revoked = token.revoked || token.revokedAt || token.revoked_at;
         card.innerHTML = `
           <div class="token-card-head">
             <div>
-              <div class="token-name">${escHtml(token.name || token.id || 'token')}</div>
-              <div class="token-meta">${escHtml(token.role || 'writer')} / ${escHtml(namespaces.join(', ') || '*')}</div>
+              <div class="token-name">${escHtml(token.label || token.name || token.id || 'token')}</div>
+              <div class="token-meta">${escHtml(token.role || 'writer')} / ${escHtml(defaultNamespace)} / R:${escHtml(read.join(', ') || '-')} W:${escHtml(write.join(', ') || '-')} D:${escHtml(del.join(', ') || '-')}</div>
             </div>
             ${revoked ? `<span class="token-pill">${t('revoked')}</span>` : ''}
           </div>
@@ -2577,9 +2591,16 @@
       const form = document.getElementById('token-form');
       const token = adminTokens.find(t => String(t.id) === String(id));
       document.getElementById('token-edit-id').value = token?.id || '';
-      document.getElementById('token-name').value = token?.name || '';
+      const defaultNamespace = token?.defaultNamespace || token?.namespace || currentNamespace || 'default';
+      const read = token?.readNamespaces || token?.namespaces || token?.allowedNamespaces || [defaultNamespace];
+      const write = token?.writeNamespaces || (token?.role === 'reader' ? [] : [defaultNamespace]);
+      const del = token?.deleteNamespaces || [];
+      document.getElementById('token-name').value = token?.label || token?.name || '';
       document.getElementById('token-role').value = token?.role || 'writer';
-      document.getElementById('token-namespaces').value = (token?.namespaces || token?.allowedNamespaces || [currentNamespace || 'default']).join(', ');
+      document.getElementById('token-default-namespace').value = defaultNamespace;
+      document.getElementById('token-read-namespaces').value = read.join(', ');
+      document.getElementById('token-write-namespaces').value = write.join(', ');
+      document.getElementById('token-delete-namespaces').value = del.join(', ');
       document.getElementById('token-output').classList.remove('open');
       form.classList.add('open');
     }
@@ -2592,11 +2613,18 @@
     async function saveToken() {
       const id = document.getElementById('token-edit-id').value;
       const btn = document.getElementById('token-save-btn');
-      const namespaces = document.getElementById('token-namespaces').value.split(',').map(s => s.trim()).filter(Boolean);
+      const splitNamespaces = value => value.split(',').map(s => s.trim()).filter(Boolean);
+      const defaultNamespace = document.getElementById('token-default-namespace').value.trim() || 'default';
+      const readNamespaces = splitNamespaces(document.getElementById('token-read-namespaces').value || defaultNamespace);
+      const writeNamespaces = splitNamespaces(document.getElementById('token-write-namespaces').value || defaultNamespace);
+      const deleteNamespaces = splitNamespaces(document.getElementById('token-delete-namespaces').value || '');
       const payload = {
-        name: document.getElementById('token-name').value.trim(),
+        label: document.getElementById('token-name').value.trim(),
         role: document.getElementById('token-role').value,
-        namespaces
+        defaultNamespace,
+        readNamespaces,
+        writeNamespaces,
+        deleteNamespaces
       };
       btn.disabled = true; btn.textContent = t('saving');
       try {
