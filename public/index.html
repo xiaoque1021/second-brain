@@ -1022,11 +1022,9 @@
 
     .token-output {
       display: none;
-      background: var(--bg);
+      background: transparent;
       color: var(--text-primary);
-      border: 0.5px solid var(--border-card);
-      border-radius: 10px;
-      padding: 12px;
+      padding: 0;
       font-size: 12px;
       line-height: 1.45;
       margin-bottom: 12px;
@@ -1037,23 +1035,44 @@
     }
 
     .token-output-row {
-      display: flex;
-      align-items: stretch;
-      gap: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 100%;
     }
 
     .token-output-code {
-      flex: 1;
-      min-width: 0;
-      overflow-x: auto;
+      max-width: min(260px, calc(100vw - 150px));
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
       font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 14px;
       user-select: all;
-      background: var(--bg-card);
+      background: var(--bg-tag);
+      color: #008c7a;
+      border-radius: 6px;
+      padding: 4px 8px;
+    }
+
+    .token-copy-icon {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+
+    .token-copy-icon:hover {
+      background: var(--bg-tag);
       color: var(--text-primary);
-      border: 0.5px solid var(--border-input);
-      border-radius: 8px;
-      padding: 12px;
     }
 
     .btn-token {
@@ -2702,7 +2721,7 @@
 
     function showTokenOutput(value) {
       const output = document.getElementById('token-output');
-      output.innerHTML = `<div class="token-output-row"><code class="token-output-code">${escHtml(value)}</code><button class="btn-token" type="button" onclick="copyTokenValue('${escAttr(value)}')"><i class="ti ti-copy"></i><span>${t('copyToken')}</span></button></div>`;
+      output.innerHTML = `<div class="token-output-row"><code class="token-output-code" title="${escAttr(value)}">${escHtml(value)}</code><button class="token-copy-icon" type="button" onclick="copyTokenValue('${escAttr(value)}')" aria-label="${escAttr(t('copyToken'))}"><i class="ti ti-clipboard"></i></button></div>`;
       output.classList.add('open');
     }
 
