@@ -751,7 +751,8 @@
     #confirm-dialog,
     #append-sheet,
     #menu-sheet,
-    #view-sheet {
+    #view-sheet,
+    #token-sheet {
       display: none;
       position: fixed;
       inset: 0;
@@ -764,7 +765,8 @@
     #confirm-dialog.open,
     #append-sheet.open,
     #menu-sheet.open,
-    #view-sheet.open {
+    #view-sheet.open,
+    #token-sheet.open {
       display: flex;
     }
 
@@ -783,7 +785,8 @@
     .confirm-sheet,
     .append-inner,
     .menu-inner,
-    .view-inner {
+    .view-inner,
+    .token-inner {
       background: var(--bg);
       border-radius: 20px 20px 0 0;
       width: 100%;
@@ -810,10 +813,18 @@
       max-height: 90vh;
     }
 
+    .token-inner {
+      padding: 20px 20px 28px;
+      display: flex;
+      flex-direction: column;
+      max-height: 92vh;
+    }
+
     .confirm-sheet h3,
     .append-inner h3,
     .menu-inner h3,
-    .view-header h3 {
+    .view-header h3,
+    .token-header h3 {
       font-family: var(--font-serif);
       font-size: 17px;
       font-weight: 500;
@@ -832,6 +843,219 @@
       align-items: center;
       margin-bottom: 16px;
       flex-shrink: 0;
+    }
+
+    .token-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .auth-mode {
+      display: none;
+      width: 100%;
+    }
+
+    .auth-mode.active {
+      display: block;
+    }
+
+    .auth-secondary {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-tag);
+      color: var(--text-primary);
+      border: none;
+      border-radius: 12px;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .identity-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 5px;
+      min-width: 0;
+    }
+
+    .identity-chip,
+    .namespace-select {
+      min-width: 0;
+      background: var(--bg-tag);
+      border: none;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 11px;
+      height: 24px;
+    }
+
+    .identity-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 8px;
+      max-width: 46%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .namespace-select {
+      flex: 1;
+      padding: 0 8px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .token-toolbar,
+    .token-actions,
+    .token-form-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .token-toolbar {
+      margin-bottom: 12px;
+    }
+
+    .token-body {
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .token-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .token-card {
+      background: var(--bg-card);
+      border: 0.5px solid var(--border-card);
+      border-radius: var(--radius-card);
+      padding: 12px;
+    }
+
+    .token-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+
+    .token-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      overflow-wrap: anywhere;
+    }
+
+    .token-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .token-pill {
+      font-size: 10px;
+      color: var(--text-tag-confirmed);
+      background: var(--bg-tag-confirmed);
+      border-radius: 999px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    .token-form {
+      display: none;
+      background: var(--bg-card);
+      border: 0.5px solid var(--border-card);
+      border-radius: var(--radius-card);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .token-form.open {
+      display: block;
+    }
+
+    .token-label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .token-input,
+    .token-select {
+      width: 100%;
+      padding: 11px 12px;
+      background: var(--bg);
+      border: 0.5px solid var(--border-input);
+      border-radius: 10px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .token-output {
+      display: none;
+      background: #eef7ef;
+      color: #235d34;
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-size: 12px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      margin-bottom: 12px;
+    }
+
+    .token-output.open {
+      display: block;
+    }
+
+    .btn-token {
+      flex: 1;
+      min-height: 38px;
+      padding: 10px 12px;
+      background: var(--bg-tag);
+      border: none;
+      border-radius: 10px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .btn-token.primary {
+      background: var(--text-primary);
+      color: var(--bg);
+    }
+
+    .btn-token.danger {
+      background: #fdeaea;
+      color: #c0392b;
+    }
+
+    .btn-token:disabled {
+      opacity: 0.5;
+      cursor: default;
     }
 
     .btn-close-icon {
@@ -1208,7 +1432,8 @@
       #confirm-dialog,
       #append-sheet,
       #menu-sheet,
-      #view-sheet {
+      #view-sheet,
+      #token-sheet {
         align-items: center;
         justify-content: center;
       }
@@ -1216,7 +1441,8 @@
       .confirm-sheet,
       .append-inner,
       .menu-inner,
-      .view-inner {
+      .view-inner,
+      .token-inner {
         border-radius: 16px;
         max-width: 400px;
       }
@@ -1281,12 +1507,20 @@
         <img src="/icon-transparent.svg" width="36" height="36" alt="Second Brain">
       </div>
       <h1 data-i18n="appName">Second Brain</h1>
-      <p data-i18n="authSubtitle">输入 Bearer token，连接你的个人记忆层。</p>
-      <form class="field-group" onsubmit="connect(); return false;">
+      <p id="auth-subtitle" data-i18n="authSubtitle">输入 Bearer token，连接你的个人记忆层。</p>
+      <form id="auth-login-form" class="field-group auth-mode active" onsubmit="connect(); return false;">
         <input type="text" name="username" value="user" autocomplete="username" style="display:none">
         <input type="url" id="auth-url" autocomplete="off" autocapitalize="none">
         <input type="password" id="auth-token" data-i18n-placeholder="bearerToken" placeholder="Bearer token" autocomplete="current-password">
         <button id="auth-connect" type="submit" data-i18n="connect">连接</button>
+      </form>
+      <form id="auth-setup-form" class="field-group auth-mode" onsubmit="setupFirstRun(); return false;">
+        <input type="url" id="setup-url" autocomplete="off" autocapitalize="none">
+        <input type="text" id="setup-name" data-i18n-placeholder="setupNamePlaceholder" autocomplete="name">
+        <input type="password" id="setup-token" data-i18n-placeholder="setupTokenPlaceholder" autocomplete="new-password">
+        <input type="text" id="setup-namespace" data-i18n-placeholder="namespacePlaceholder" autocomplete="off" autocapitalize="none">
+        <button id="setup-submit" type="submit" data-i18n="setupCreate">创建管理员</button>
+        <button class="auth-secondary" type="button" onclick="showAuthMode('login')" data-i18n="backToLogin">返回登录</button>
       </form>
       <div id="auth-error"></div>
     </div>
@@ -1303,6 +1537,10 @@
         <div>
           <div class="sb-brand-name" data-i18n="appName">Second Brain</div>
           <div class="sb-brand-status" id="sb-status">随时记得</div>
+          <div class="identity-strip">
+            <span class="identity-chip" id="sb-identity-chip"><i class="ti ti-user"></i><span data-i18n="unknownIdentity">未知身份</span></span>
+            <select class="namespace-select" id="sb-namespace-select" onchange="setNamespace(this.value)" aria-label="Namespace"></select>
+          </div>
         </div>
       </div>
       <nav class="sb-nav">
@@ -1331,6 +1569,10 @@
         <div class="topbar-info">
           <div class="topbar-name" data-i18n="appName">Second Brain</div>
           <div class="topbar-status" id="topbar-status">随时记得</div>
+          <div class="identity-strip">
+            <span class="identity-chip" id="identity-chip"><i class="ti ti-user"></i><span data-i18n="unknownIdentity">未知身份</span></span>
+            <select class="namespace-select" id="namespace-select" onchange="setNamespace(this.value)" aria-label="Namespace"></select>
+          </div>
         </div>
         <button class="topbar-menu" onclick="openMenu()"><i class="ti ti-dots"></i></button>
       </div>
@@ -1479,9 +1721,42 @@
       <button class="menu-item" onclick="closeMenu(); switchTab('recent')">
         <i class="ti ti-clock"></i> <span data-i18n="viewAll">查看所有记忆</span>
       </button>
+      <button class="menu-item" id="token-menu-item" onclick="closeMenu(); openTokenSheet()" style="display:none">
+        <i class="ti ti-key"></i> <span data-i18n="tokenManagement">Token 管理</span>
+      </button>
       <button class="menu-item danger" onclick="logout()">
         <i class="ti ti-logout"></i> <span data-i18n="disconnect">断开连接</span>
       </button>
+    </div>
+  </div>
+
+  <div id="token-sheet">
+    <div class="token-inner">
+      <div class="token-header">
+        <h3 data-i18n="tokenManagement">Token 管理</h3>
+        <button class="btn-close-icon" onclick="closeTokenSheet()"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="token-toolbar">
+        <button class="btn-token primary" onclick="openTokenForm()"><i class="ti ti-plus"></i><span data-i18n="newToken">新建 Token</span></button>
+        <button class="btn-token" id="reindex-btn" onclick="reindexNamespace()"><i class="ti ti-refresh"></i><span data-i18n="reindex">重建索引</span></button>
+      </div>
+      <div class="token-body">
+        <div class="token-output" id="token-output"></div>
+        <div class="token-form" id="token-form">
+          <input type="hidden" id="token-edit-id">
+          <label class="token-label"><span data-i18n="tokenName">名称</span><input class="token-input" id="token-name" type="text"></label>
+          <label class="token-label"><span data-i18n="tokenRole">角色</span><select class="token-select" id="token-role"><option value="writer">writer</option><option value="admin">admin</option><option value="reader">reader</option></select></label>
+          <label class="token-label"><span data-i18n="tokenNamespaces">命名空间</span><input class="token-input" id="token-namespaces" type="text" placeholder="default, work"></label>
+          <label class="token-label"><span data-i18n="tokenExpires">过期时间</span><input class="token-input" id="token-expires" type="datetime-local"></label>
+          <div class="token-form-actions">
+            <button class="btn-token" type="button" onclick="closeTokenForm()" data-i18n="cancel">取消</button>
+            <button class="btn-token primary" type="button" onclick="saveToken()" id="token-save-btn" data-i18n="saveToken">保存 Token</button>
+          </div>
+        </div>
+        <div class="token-list" id="token-list">
+          <div class="empty-state"><i class="ti ti-key"></i><span data-i18n="loading">加载中...</span></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1490,14 +1765,22 @@
     let pendingForgetId = null, pendingAppendId = null, pendingForgetCard = null;
     let currentTab = 'recall', selectedTag = '';
     let currentLanguage = 'zh-CN';
+    let currentIdentity = null, currentNamespace = '', availableNamespaces = [], adminTokens = [];
 
     const I18N = {
       'zh-CN': {
         appName: 'Second Brain',
         authSubtitle: '输入 Bearer token，连接你的个人记忆层。',
+        setupSubtitle: '首次运行：创建管理员 token 和默认命名空间。',
         bearerToken: 'Bearer token',
+        setupNamePlaceholder: '管理员名称',
+        setupTokenPlaceholder: '管理员 token',
+        namespacePlaceholder: '默认命名空间',
+        setupCreate: '创建管理员',
+        backToLogin: '返回登录',
         connect: '连接',
         connecting: '连接中...',
+        settingUp: '正在创建...',
         recall: '回忆',
         recent: '最近',
         remember: '记录',
@@ -1532,6 +1815,27 @@
         append: '追加',
         memory: '记忆',
         viewAll: '查看所有记忆',
+        tokenManagement: 'Token 管理',
+        newToken: '新建 Token',
+        editToken: '编辑',
+        revokeToken: '撤销',
+        reindex: '重建索引',
+        reindexing: '重建中...',
+        reindexStarted: '索引重建已开始。',
+        tokenName: '名称',
+        tokenRole: '角色',
+        tokenNamespaces: '命名空间',
+        tokenExpires: '过期时间',
+        saveToken: '保存 Token',
+        tokenCreated: token => `只显示一次：${token}`,
+        tokenSaved: 'Token 已保存。',
+        tokenRevoked: 'Token 已撤销。',
+        noTokens: '还没有管理 token。',
+        neverExpires: '永不过期',
+        revoked: '已撤销',
+        adminOnly: '仅管理员可用',
+        unknownIdentity: '未知身份',
+        namespaceLabel: ns => `命名空间：${ns}`,
         disconnect: '断开连接',
         fillFields: '请填写地址和 token。',
         invalidToken: 'Token 无效',
@@ -1556,9 +1860,16 @@
       en: {
         appName: 'Second Brain',
         authSubtitle: 'Enter your Bearer token to connect to your personal memory layer.',
+        setupSubtitle: 'First run: create an admin token and default namespace.',
         bearerToken: 'Bearer token',
+        setupNamePlaceholder: 'Admin name',
+        setupTokenPlaceholder: 'Admin token',
+        namespacePlaceholder: 'Default namespace',
+        setupCreate: 'Create admin',
+        backToLogin: 'Back to login',
         connect: 'Connect',
         connecting: 'Connecting...',
+        settingUp: 'Creating...',
         recall: 'Recall',
         recent: 'Recent',
         remember: 'Remember',
@@ -1593,6 +1904,27 @@
         append: 'Append',
         memory: 'Memory',
         viewAll: 'View all memories',
+        tokenManagement: 'Token Management',
+        newToken: 'New Token',
+        editToken: 'Edit',
+        revokeToken: 'Revoke',
+        reindex: 'Reindex',
+        reindexing: 'Reindexing...',
+        reindexStarted: 'Reindex started.',
+        tokenName: 'Name',
+        tokenRole: 'Role',
+        tokenNamespaces: 'Namespaces',
+        tokenExpires: 'Expires',
+        saveToken: 'Save Token',
+        tokenCreated: token => `Shown once: ${token}`,
+        tokenSaved: 'Token saved.',
+        tokenRevoked: 'Token revoked.',
+        noTokens: 'No admin tokens yet.',
+        neverExpires: 'Never expires',
+        revoked: 'Revoked',
+        adminOnly: 'Admins only',
+        unknownIdentity: 'Unknown identity',
+        namespaceLabel: ns => `Namespace: ${ns}`,
         disconnect: 'Disconnect',
         fillFields: 'Please fill in both fields.',
         invalidToken: 'Invalid token',
@@ -1642,6 +1974,8 @@
       if (saveBtn && !saveBtn.disabled) saveBtn.textContent = t('update');
       const forgetBtn = document.querySelector('#confirm-dialog .btn-delete');
       if (forgetBtn && !forgetBtn.disabled) forgetBtn.textContent = t('forget');
+      renderIdentity();
+      renderTokenList();
     }
 
     function init() {
@@ -1652,10 +1986,72 @@
       // Auto-populate URL from the current page origin (UI is hosted on the same Worker)
       const origin = window.location.origin;
       document.getElementById('auth-url').value = origin;
+      document.getElementById('setup-url').value = origin;
 
       const url = localStorage.getItem('sb_url') || origin;
       const tok = localStorage.getItem('sb_token');
+      const ns = localStorage.getItem('sb_namespace') || '';
+      if (ns) currentNamespace = ns;
+      checkAuthStatus(url);
       if (tok) { WORKER_URL = url; AUTH_TOKEN = tok; showApp(); }
+    }
+
+    function authHeaders(extra = {}) {
+      return { ...extra, ...(AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}) };
+    }
+
+    function nsParam() {
+      return currentNamespace ? `namespace=${encodeURIComponent(currentNamespace)}` : '';
+    }
+
+    function withNamespace(args = {}) {
+      return currentNamespace ? { ...args, namespace: currentNamespace } : { ...args };
+    }
+
+    function showAuthMode(mode) {
+      const isSetup = mode === 'setup';
+      document.getElementById('auth-login-form').classList.toggle('active', !isSetup);
+      document.getElementById('auth-setup-form').classList.toggle('active', isSetup);
+      document.getElementById('auth-subtitle').textContent = t(isSetup ? 'setupSubtitle' : 'authSubtitle');
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    async function checkAuthStatus(url) {
+      try {
+        const res = await fetch(`${url}/auth/status`);
+        if (!res.ok) return;
+        const status = await res.json();
+        if (status.setupRequired || status.needsSetup || status.firstRun) showAuthMode('setup');
+      } catch { }
+    }
+
+    async function setupFirstRun() {
+      const url = document.getElementById('setup-url').value.trim().replace(/\/$/, '');
+      const name = document.getElementById('setup-name').value.trim();
+      const token = document.getElementById('setup-token').value.trim();
+      const namespace = document.getElementById('setup-namespace').value.trim() || 'default';
+      const err = document.getElementById('auth-error');
+      const btn = document.getElementById('setup-submit');
+      if (!url || !name || !token) { err.textContent = t('fillFields'); return; }
+      btn.textContent = t('settingUp'); btn.disabled = true; err.textContent = '';
+      try {
+        const res = await fetch(`${url}/auth/setup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, token, namespace, namespaces: [namespace], role: 'admin' })
+        });
+        if (!res.ok) throw new Error(t('serverError', res.status));
+        const data = await res.json();
+        const issuedToken = data.token || data.plaintext || token;
+        localStorage.setItem('sb_url', url);
+        localStorage.setItem('sb_token', issuedToken);
+        localStorage.setItem('sb_namespace', namespace);
+        WORKER_URL = url; AUTH_TOKEN = issuedToken; currentNamespace = namespace;
+        showApp();
+      } catch (e) {
+        err.textContent = e.message || t('connectFailed');
+        btn.textContent = t('setupCreate'); btn.disabled = false;
+      }
     }
 
     async function connect() {
@@ -1666,7 +2062,7 @@
       if (!url || !tok) { err.textContent = t('fillFields'); return; }
       btn.textContent = t('connecting'); btn.disabled = true; err.textContent = '';
       try {
-        const res = await fetch(`${url}/list?n=1`, { headers: { 'Authorization': `Bearer ${tok}` } });
+        const res = await fetch(`${url}/auth/me`, { headers: { 'Authorization': `Bearer ${tok}` } });
         if (res.status === 401) throw new Error(t('invalidToken'));
         if (!res.ok) throw new Error(t('serverError', res.status));
         localStorage.setItem('sb_url', url); localStorage.setItem('sb_token', tok);
@@ -1680,12 +2076,61 @@
     function showApp() {
       document.getElementById('auth-overlay').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
+      loadIdentity(); loadRecent(); loadTags(); updateStatus();
+    }
+
+    async function loadIdentity() {
+      try {
+        const res = await fetch(`${WORKER_URL}/auth/me`, { headers: authHeaders() });
+        if (!res.ok) throw new Error();
+        currentIdentity = await res.json();
+        availableNamespaces = currentIdentity.namespaces || currentIdentity.allowedNamespaces || currentIdentity.writeNamespaces || [];
+        if (!availableNamespaces.length && currentIdentity.namespace) availableNamespaces = [currentIdentity.namespace];
+        if (!currentNamespace) currentNamespace = currentIdentity.defaultNamespace || currentIdentity.namespace || availableNamespaces[0] || 'default';
+        if (!availableNamespaces.includes(currentNamespace)) availableNamespaces.unshift(currentNamespace);
+        localStorage.setItem('sb_namespace', currentNamespace);
+      } catch {
+        currentIdentity = null;
+        if (!currentNamespace) currentNamespace = localStorage.getItem('sb_namespace') || 'default';
+        availableNamespaces = [currentNamespace];
+      }
+      renderIdentity();
+      if (isAdmin()) loadTokens();
+    }
+
+    function renderIdentity() {
+      const chips = [document.getElementById('identity-chip'), document.getElementById('sb-identity-chip')].filter(Boolean);
+      const selects = [document.getElementById('namespace-select'), document.getElementById('sb-namespace-select')].filter(Boolean);
+      if (chips.length) {
+        const name = currentIdentity?.name || currentIdentity?.id || t('unknownIdentity');
+        const role = currentIdentity?.role ? ` (${currentIdentity.role})` : '';
+        chips.forEach(chip => { chip.innerHTML = `<i class="ti ti-user"></i><span>${escHtml(name + role)}</span>`; });
+      }
+      if (selects.length) {
+        const namespaces = availableNamespaces.length ? availableNamespaces : [currentNamespace || 'default'];
+        selects.forEach(sel => {
+          sel.innerHTML = namespaces.map(ns => `<option value="${escHtml(ns)}"${ns === currentNamespace ? ' selected' : ''}>${escHtml(t('namespaceLabel', ns))}</option>`).join('');
+        });
+      }
+      const tokenMenu = document.getElementById('token-menu-item');
+      if (tokenMenu) tokenMenu.style.display = isAdmin() ? 'flex' : 'none';
+    }
+
+    function isAdmin() {
+      return currentIdentity?.isAdmin || currentIdentity?.admin || currentIdentity?.role === 'admin' || (currentIdentity?.scopes || []).includes('admin');
+    }
+
+    function setNamespace(ns) {
+      currentNamespace = ns || 'default';
+      localStorage.setItem('sb_namespace', currentNamespace);
+      renderIdentity();
       loadRecent(); loadTags(); updateStatus();
     }
 
     async function loadTags() {
       try {
-        const res = await fetch(`${WORKER_URL}/tags`, { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
+        const query = nsParam();
+        const res = await fetch(`${WORKER_URL}/tags${query ? '?' + query : ''}`, { headers: authHeaders() });
         const tags = await res.json();
         ['tag-filter-recent', 'tag-filter-recall'].forEach(id => {
           const sel = document.getElementById(id);
@@ -1712,8 +2157,8 @@
 
     function logout() {
       closeMenu();
-      localStorage.removeItem('sb_url'); localStorage.removeItem('sb_token');
-      WORKER_URL = ''; AUTH_TOKEN = '';
+      localStorage.removeItem('sb_url'); localStorage.removeItem('sb_token'); localStorage.removeItem('sb_namespace');
+      WORKER_URL = ''; AUTH_TOKEN = ''; currentIdentity = null; currentNamespace = ''; availableNamespaces = []; adminTokens = [];
       document.getElementById('app').style.display = 'none';
       document.getElementById('auth-overlay').style.display = 'flex';
       document.getElementById('auth-url').value = '';
@@ -1721,6 +2166,7 @@
       document.getElementById('auth-error').textContent = '';
       document.getElementById('auth-connect').textContent = t('connect');
       document.getElementById('auth-connect').disabled = false;
+      showAuthMode('login');
     }
 
     function switchTab(tab) {
@@ -1736,7 +2182,8 @@
 
     async function updateStatus() {
       try {
-        const res = await fetch(`${WORKER_URL}/list?n=1000`, { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
+        const query = nsParam();
+        const res = await fetch(`${WORKER_URL}/list?n=1000${query ? '&' + query : ''}`, { headers: authHeaders() });
         const data = await res.json();
         const count = Array.isArray(data) ? data.length : 0;
         const text = count === 0 ? t('alwaysRemembers') : t('memoryStored', count);
@@ -1749,8 +2196,8 @@
     async function apiMcp(toolName, args) {
       const res = await fetch(`${WORKER_URL}/mcp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'tools/call', params: { name: toolName, arguments: args } })
+        headers: authHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' }),
+        body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'tools/call', params: { name: toolName, arguments: withNamespace(args) } })
       });
       const text = await res.text();
       const match = text.match(/data: ({.+})/s);
@@ -1763,14 +2210,15 @@
     async function apiCapture(content, tags, source) {
       const res = await fetch(`${WORKER_URL}/capture`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
-        body: JSON.stringify({ content, tags, source: source || 'web-ui' })
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(withNamespace({ content, tags, source: source || 'web-ui' }))
       });
       return res.json();
     }
 
     async function apiList(n = 50) {
-      const res = await fetch(`${WORKER_URL}/list?n=${n}`, { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
+      const query = nsParam();
+      const res = await fetch(`${WORKER_URL}/list?n=${n}${query ? '&' + query : ''}`, { headers: authHeaders() });
       return res.json();
     }
 
@@ -1807,8 +2255,8 @@
 
           const res = await fetch(`${WORKER_URL}/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${AUTH_TOKEN}` },
-            body: JSON.stringify({ query, memories: result })
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(withNamespace({ query, memories: result }))
           });
 
           const reader = res.body.getReader();
@@ -2065,6 +2513,158 @@
       }
     }
 
+    function openTokenSheet() {
+      if (!isAdmin()) { alert(t('adminOnly')); return; }
+      document.getElementById('token-sheet').classList.add('open');
+      loadTokens();
+    }
+    function closeTokenSheet() { document.getElementById('token-sheet').classList.remove('open'); closeTokenForm(); }
+
+    async function loadTokens() {
+      if (!isAdmin() || !WORKER_URL) return;
+      const list = document.getElementById('token-list');
+      if (list) list.innerHTML = `<div class="empty-state"><i class="ti ti-key"></i><span>${t('loading')}</span></div>`;
+      try {
+        const res = await fetch(`${WORKER_URL}/admin/tokens`, { headers: authHeaders() });
+        if (!res.ok) throw new Error(t('serverError', res.status));
+        const data = await res.json();
+        adminTokens = Array.isArray(data) ? data : (data.tokens || []);
+        renderTokenList();
+      } catch {
+        if (list) list.innerHTML = `<div class="empty-state"><i class="ti ti-wifi-off"></i><span>${t('loadFailed')}</span></div>`;
+      }
+    }
+
+    function renderTokenList() {
+      const list = document.getElementById('token-list');
+      if (!list) return;
+      if (!adminTokens.length) {
+        list.innerHTML = `<div class="empty-state"><i class="ti ti-key"></i><span>${t('noTokens')}</span></div>`;
+        return;
+      }
+      list.innerHTML = '';
+      adminTokens.forEach(token => {
+        const card = document.createElement('div');
+        card.className = 'token-card';
+        const namespaces = token.namespaces || token.allowedNamespaces || [];
+        const expires = token.expiresAt || token.expires_at || token.expires || '';
+        const revoked = token.revoked || token.revokedAt || token.revoked_at;
+        card.innerHTML = `
+          <div class="token-card-head">
+            <div>
+              <div class="token-name">${escHtml(token.name || token.id || 'token')}</div>
+              <div class="token-meta">${escHtml(token.role || 'writer')} / ${escHtml(namespaces.join(', ') || '*')} / ${expires ? escHtml(formatDateTime(expires)) : t('neverExpires')}</div>
+            </div>
+            ${revoked ? `<span class="token-pill">${t('revoked')}</span>` : ''}
+          </div>
+          <div class="token-actions">
+            <button class="btn-token" onclick="openTokenForm('${escAttr(token.id)}')"><i class="ti ti-pencil"></i><span>${t('editToken')}</span></button>
+            <button class="btn-token danger" onclick="revokeToken('${escAttr(token.id)}')" ${revoked ? 'disabled' : ''}><i class="ti ti-ban"></i><span>${t('revokeToken')}</span></button>
+          </div>`;
+        list.appendChild(card);
+      });
+    }
+
+    function openTokenForm(id = '') {
+      const form = document.getElementById('token-form');
+      const token = adminTokens.find(t => String(t.id) === String(id));
+      document.getElementById('token-edit-id').value = token?.id || '';
+      document.getElementById('token-name').value = token?.name || '';
+      document.getElementById('token-role').value = token?.role || 'writer';
+      document.getElementById('token-namespaces').value = (token?.namespaces || token?.allowedNamespaces || [currentNamespace || 'default']).join(', ');
+      document.getElementById('token-expires').value = toDateTimeLocal(token?.expiresAt || token?.expires_at || '');
+      document.getElementById('token-output').classList.remove('open');
+      form.classList.add('open');
+    }
+
+    function closeTokenForm() {
+      const form = document.getElementById('token-form');
+      if (form) form.classList.remove('open');
+    }
+
+    async function saveToken() {
+      const id = document.getElementById('token-edit-id').value;
+      const btn = document.getElementById('token-save-btn');
+      const namespaces = document.getElementById('token-namespaces').value.split(',').map(s => s.trim()).filter(Boolean);
+      const expiresAt = document.getElementById('token-expires').value;
+      const payload = {
+        name: document.getElementById('token-name').value.trim(),
+        role: document.getElementById('token-role').value,
+        namespaces,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null
+      };
+      btn.disabled = true; btn.textContent = t('saving');
+      try {
+        const res = await fetch(id ? `${WORKER_URL}/admin/tokens/${encodeURIComponent(id)}` : `${WORKER_URL}/admin/tokens`, {
+          method: id ? 'PUT' : 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(t('serverError', res.status));
+        const data = await res.json();
+        const output = document.getElementById('token-output');
+        const rawToken = data.token || data.plaintext || data.secret || data.value;
+        output.textContent = rawToken ? t('tokenCreated', rawToken) : t('tokenSaved');
+        output.classList.add('open');
+        closeTokenForm();
+        await loadTokens();
+      } catch (e) {
+        alert(e.message || t('somethingWrongShort'));
+      } finally {
+        btn.disabled = false; btn.textContent = t('saveToken');
+      }
+    }
+
+    async function revokeToken(id) {
+      if (!id) return;
+      try {
+        const res = await fetch(`${WORKER_URL}/admin/tokens/${encodeURIComponent(id)}/revoke`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ revoked: true })
+        });
+        if (!res.ok) throw new Error(t('serverError', res.status));
+        document.getElementById('token-output').textContent = t('tokenRevoked');
+        document.getElementById('token-output').classList.add('open');
+        await loadTokens();
+      } catch (e) {
+        alert(e.message || t('somethingWrongShort'));
+      }
+    }
+
+    async function reindexNamespace() {
+      const btn = document.getElementById('reindex-btn');
+      btn.disabled = true;
+      btn.querySelector('span').textContent = t('reindexing');
+      try {
+        const res = await fetch(`${WORKER_URL}/admin/reindex`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(withNamespace({}))
+        });
+        if (!res.ok) throw new Error(t('serverError', res.status));
+        document.getElementById('token-output').textContent = t('reindexStarted');
+        document.getElementById('token-output').classList.add('open');
+      } catch (e) {
+        alert(e.message || t('somethingWrongShort'));
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('span').textContent = t('reindex');
+      }
+    }
+
+    function formatDateTime(value) {
+      try { return new Date(value).toLocaleString(t('locale'), { dateStyle: 'medium', timeStyle: 'short' }); } catch { return value; }
+    }
+
+    function toDateTimeLocal(value) {
+      if (!value) return '';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
     function openMenu() { document.getElementById('menu-sheet').classList.add('open'); }
     function closeMenu() { document.getElementById('menu-sheet').classList.remove('open'); }
 
@@ -2096,6 +2696,7 @@
     document.getElementById('append-sheet').addEventListener('click', e => { if (e.target === document.getElementById('append-sheet')) closeAppend(); });
     document.getElementById('menu-sheet').addEventListener('click', e => { if (e.target === document.getElementById('menu-sheet')) closeMenu(); });
     document.getElementById('view-sheet').addEventListener('click', e => { if (e.target === document.getElementById('view-sheet')) closeView(); });
+    document.getElementById('token-sheet').addEventListener('click', e => { if (e.target === document.getElementById('token-sheet')) closeTokenSheet(); });
 
     function appendBrainBubble(container, text) {
       const row = document.createElement('div');
