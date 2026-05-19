@@ -14,6 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+  <link rel="icon" href="/icon.png" type="image/png">
   <link rel="manifest" href="/manifest.json">
   <style>
     *,
@@ -1021,7 +1022,7 @@
 
     .token-output {
       display: none;
-      background: var(--bg-card);
+      background: var(--bg);
       color: var(--text-primary);
       border: 0.5px solid var(--border-card);
       border-radius: 10px;
@@ -1048,8 +1049,9 @@
       white-space: nowrap;
       font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
       user-select: all;
-      background: #eef7ef;
-      color: #235d34;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 0.5px solid var(--border-input);
       border-radius: 8px;
       padding: 12px;
     }

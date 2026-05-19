@@ -742,6 +742,11 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
 
   if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
 
+  if (url.pathname === "/favicon.ico" && request.method === "GET") {
+    const assetUrl = new URL("/icon.png", request.url);
+    return fetch(new Request(assetUrl, request));
+  }
+
   if (url.pathname === "/auth/status" && request.method === "GET") {
     return json({ setupRequired: !(await tokenTableHasRows(env)), legacyAvailable: Boolean(env.AUTH_TOKEN) });
   }
