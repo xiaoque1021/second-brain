@@ -156,7 +156,8 @@
       border-color: rgba(0, 0, 0, 0.2);
     }
 
-    #auth-connect {
+    #auth-connect,
+    #setup-submit {
       width: 100%;
       padding: 14px;
       background: var(--text-primary);
@@ -170,7 +171,8 @@
       transition: opacity 0.15s;
     }
 
-    #auth-connect:active {
+    #auth-connect:active,
+    #setup-submit:active {
       opacity: 0.8;
     }
 
@@ -860,20 +862,27 @@
     }
 
     .auth-mode.active {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
     .auth-secondary {
       width: 100%;
-      padding: 12px;
-      background: var(--bg-tag);
-      color: var(--text-primary);
+      padding: 4px 0;
+      background: none;
+      color: var(--text-secondary);
       border: none;
-      border-radius: 12px;
       font-family: var(--font-sans);
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
-      margin-top: 8px;
+      margin-top: 2px;
+      text-align: center;
+      transition: color 0.15s;
+    }
+
+    .auth-secondary:hover {
+      color: var(--text-primary);
     }
 
     .identity-strip {
