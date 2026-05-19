@@ -1021,8 +1021,9 @@
 
     .token-output {
       display: none;
-      background: #eef7ef;
-      color: #235d34;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 0.5px solid var(--border-card);
       border-radius: 10px;
       padding: 12px;
       font-size: 12px;
@@ -1036,7 +1037,7 @@
 
     .token-output-row {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 8px;
     }
 
@@ -1047,6 +1048,10 @@
       white-space: nowrap;
       font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
       user-select: all;
+      background: #eef7ef;
+      color: #235d34;
+      border-radius: 8px;
+      padding: 12px;
     }
 
     .btn-token {
@@ -1792,7 +1797,7 @@
         <div class="token-form" id="token-form">
           <input type="hidden" id="token-edit-id">
           <label class="token-label"><span data-i18n="tokenName">名称</span><input class="token-input" id="token-name" type="text"></label>
-          <label class="token-label"><span data-i18n="tokenRole">角色</span><select class="token-select" id="token-role"><option value="writer">writer</option><option value="admin">admin</option><option value="reader">reader</option></select></label>
+          <label class="token-label"><span data-i18n="tokenRole">角色</span><select class="token-select" id="token-role"><option value="writer">writer</option><option value="reader">reader</option></select></label>
           <label class="token-label"><span data-i18n="tokenNamespaces">命名空间</span><input class="token-input" id="token-namespaces" type="text" placeholder="codex, shared, project:*"></label>
           <div class="token-form-actions">
             <button class="btn-token" type="button" onclick="closeTokenForm()" data-i18n="cancel">取消</button>
@@ -1864,7 +1869,7 @@
         tokenManagement: 'Token 管理',
         newToken: '新建 Token',
         editToken: '编辑',
-        revokeToken: '撤销',
+        deleteToken: '删除',
         reindex: '重建索引',
         reindexing: '重建中...',
         reindexStarted: '索引重建已开始。',
@@ -1878,10 +1883,10 @@
         tokenUnavailable: '无法解密这个 Token。请确认正在使用创建它的管理员 Token。',
         tokenCreated: token => `Token：${token}`,
         tokenSaved: 'Token 已保存。',
-        tokenRevoked: 'Token 已撤销。',
+        tokenDeleted: 'Token 和绑定命名空间已删除。',
         noTokens: '还没有管理 token。',
         neverExpires: '永不过期',
-        revoked: '已撤销',
+        namespaceLocked: '命名空间创建后不可修改',
         adminOnly: '仅管理员可用',
         unknownIdentity: '未知身份',
         namespaceLabel: ns => `命名空间：${ns}`,
@@ -1956,7 +1961,7 @@
         tokenManagement: 'Token Management',
         newToken: 'New Token',
         editToken: 'Edit',
-        revokeToken: 'Revoke',
+        deleteToken: 'Delete',
         reindex: 'Reindex',
         reindexing: 'Reindexing...',
         reindexStarted: 'Reindex started.',
@@ -1970,10 +1975,10 @@
         tokenUnavailable: 'Could not decrypt this token. Make sure you are using the admin token that created it.',
         tokenCreated: token => `Token: ${token}`,
         tokenSaved: 'Token saved.',
-        tokenRevoked: 'Token revoked.',
+        tokenDeleted: 'Token and bound namespace deleted.',
         noTokens: 'No admin tokens yet.',
         neverExpires: 'Never expires',
-        revoked: 'Revoked',
+        namespaceLocked: 'Namespace cannot be changed after creation',
         adminOnly: 'Admins only',
         unknownIdentity: 'Unknown identity',
         namespaceLabel: ns => `Namespace: ${ns}`,
@@ -2615,22 +2620,17 @@
         const card = document.createElement('div');
         card.className = 'token-card';
         const defaultNamespace = token.defaultNamespace || token.namespace || 'default';
-        const read = token.readNamespaces || token.namespaces || token.allowedNamespaces || [];
-        const write = token.writeNamespaces || [];
-        const del = token.deleteNamespaces || [];
-        const revoked = token.revoked || token.revokedAt || token.revoked_at;
         card.innerHTML = `
           <div class="token-card-head">
             <div>
               <div class="token-name">${escHtml(token.label || token.name || token.id || 'token')}</div>
-              <div class="token-meta">${escHtml(token.role || 'writer')} / ${escHtml(defaultNamespace)} / R:${escHtml(read.join(', ') || '-')} W:${escHtml(write.join(', ') || '-')} D:${escHtml(del.join(', ') || '-')}</div>
+              <div class="token-meta">${escHtml(token.role || 'writer')} / ${escHtml(defaultNamespace)}</div>
             </div>
-            ${revoked ? `<span class="token-pill">${t('revoked')}</span>` : ''}
           </div>
           <div class="token-actions">
             <button class="btn-token" onclick="openTokenForm('${escAttr(token.id)}')"><i class="ti ti-pencil"></i><span>${t('editToken')}</span></button>
-            <button class="btn-token" onclick="showTokenValue('${escAttr(token.id)}')" ${revoked || !token.token ? 'disabled' : ''}><i class="ti ti-eye"></i><span>${t('viewToken')}</span></button>
-            <button class="btn-token danger" onclick="revokeToken('${escAttr(token.id)}')" ${revoked ? 'disabled' : ''}><i class="ti ti-ban"></i><span>${t('revokeToken')}</span></button>
+            <button class="btn-token" onclick="showTokenValue('${escAttr(token.id)}')" ${!token.token ? 'disabled' : ''}><i class="ti ti-eye"></i><span>${t('viewToken')}</span></button>
+            <button class="btn-token danger" onclick="deleteToken('${escAttr(token.id)}')"><i class="ti ti-trash"></i><span>${t('deleteToken')}</span></button>
           </div>`;
         list.appendChild(card);
       });
@@ -2641,33 +2641,36 @@
       const token = adminTokens.find(t => String(t.id) === String(id));
       document.getElementById('token-edit-id').value = token?.id || '';
       const defaultNamespace = token?.defaultNamespace || token?.namespace || currentNamespace || 'default';
-      const namespaces = token?.namespaces || token?.allowedNamespaces || token?.readNamespaces || [defaultNamespace];
       document.getElementById('token-name').value = token?.label || token?.name || '';
       document.getElementById('token-role').value = token?.role || 'writer';
-      document.getElementById('token-namespaces').value = namespaces.join(', ');
+      const namespaceInput = document.getElementById('token-namespaces');
+      namespaceInput.value = defaultNamespace;
+      namespaceInput.disabled = Boolean(token?.id);
+      namespaceInput.title = token?.id ? t('namespaceLocked') : '';
       document.getElementById('token-output').classList.remove('open');
+      document.getElementById('token-list').style.display = 'none';
       form.classList.add('open');
     }
 
     function closeTokenForm() {
       const form = document.getElementById('token-form');
       if (form) form.classList.remove('open');
+      const namespaceInput = document.getElementById('token-namespaces');
+      namespaceInput.disabled = false;
+      namespaceInput.title = '';
+      document.getElementById('token-list').style.display = '';
     }
 
     async function saveToken() {
       const id = document.getElementById('token-edit-id').value;
       const btn = document.getElementById('token-save-btn');
-      const splitNamespaces = value => value.split(',').map(s => s.trim()).filter(Boolean);
-      const namespaces = splitNamespaces(document.getElementById('token-namespaces').value || 'default');
+      const namespace = document.getElementById('token-namespaces').value.trim() || 'default';
       const role = document.getElementById('token-role').value;
-      const defaultNamespace = namespaces[0] || 'default';
       const payload = {
         label: document.getElementById('token-name').value.trim(),
         role,
-        defaultNamespace,
-        readNamespaces: namespaces,
-        writeNamespaces: role === 'reader' ? [] : namespaces,
-        deleteNamespaces: role === 'admin' ? ['*'] : []
+        namespace,
+        defaultNamespace: namespace
       };
       btn.disabled = true; btn.textContent = t('saving');
       try {
@@ -2716,16 +2719,15 @@
       }
     }
 
-    async function revokeToken(id) {
+    async function deleteToken(id) {
       if (!id) return;
       try {
-        const res = await fetch(`${WORKER_URL}/admin/tokens/${encodeURIComponent(id)}/revoke`, {
-          method: 'POST',
-          headers: authHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ revoked: true })
+        const res = await fetch(`${WORKER_URL}/admin/tokens/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: authHeaders({ 'Content-Type': 'application/json' })
         });
         if (!res.ok) throw new Error(t('serverError', res.status));
-        showTokenMessage(t('tokenRevoked'));
+        showTokenMessage(t('tokenDeleted'));
         await loadTokens();
       } catch (e) {
         alert(e.message || t('somethingWrongShort'));

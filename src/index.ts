@@ -645,10 +645,11 @@ function buildMcpServer(env: Env, ctx: AuthContext): McpServer {
 }
 
 function sanitizeTokenRow(row: TokenRow, adminToken?: string) {
-  const read = parseJsonArray(row.read_namespaces);
-  const write = parseJsonArray(row.write_namespaces);
-  const del = parseJsonArray(row.delete_namespaces);
-  const namespaces = row.role === "admin" ? [ALL_NAMESPACES] : Array.from(new Set([...read, ...write, ...del]));
+  const namespace = row.default_namespace || DEFAULT_NAMESPACE;
+  const read = row.role === "admin" ? [ALL_NAMESPACES] : [namespace];
+  const write = row.role === "writer" ? [namespace] : row.role === "admin" ? [ALL_NAMESPACES] : [];
+  const del = row.role === "writer" ? [namespace] : row.role === "admin" ? [ALL_NAMESPACES] : [];
+  const namespaces = row.role === "admin" ? [ALL_NAMESPACES] : [namespace];
   return {
     id: row.id,
     name: row.label,
@@ -672,7 +673,7 @@ function sanitizeTokenRow(row: TokenRow, adminToken?: string) {
 }
 
 async function adminListTokens(env: Env, ctx: AuthContext): Promise<Response> {
-  const { results } = await env.DB.prepare(`SELECT * FROM auth_tokens ORDER BY created_at DESC`).all();
+  const { results } = await env.DB.prepare(`SELECT * FROM auth_tokens WHERE role != 'admin' ORDER BY created_at DESC`).all();
   const rows = results as unknown as TokenRow[];
   const tokens = await Promise.all(rows.map(async (row) => {
     const out: any = sanitizeTokenRow(row);
@@ -686,11 +687,12 @@ async function createToken(env: Env, ctx: AuthContext, body: any, role: Role = "
   const token = generateToken();
   const tokenHash = await sha256Hex(token);
   const frontNamespaces = body.namespaces || body.allowedNamespaces;
-  const defaultNamespace = normalizeNamespace(body.defaultNamespace || body.default_namespace || body.namespace || frontNamespaces?.[0], DEFAULT_NAMESPACE);
-  const finalRole: Role = body.role === "admin" ? "admin" : body.role === "reader" ? "reader" : body.role === "writer" ? "writer" : role;
-  const read = finalRole === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.readNamespaces || body.read_namespaces || frontNamespaces, [defaultNamespace]);
-  const write = finalRole === "admin" ? [ALL_NAMESPACES] : finalRole === "reader" ? [] : normalizeNamespaceList(body.writeNamespaces || body.write_namespaces || frontNamespaces, [defaultNamespace]);
-  const del = finalRole === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.deleteNamespaces || body.delete_namespaces, []);
+  const requestedNamespace = Array.isArray(frontNamespaces) ? frontNamespaces[0] : frontNamespaces;
+  const defaultNamespace = normalizeNamespace(body.defaultNamespace || body.default_namespace || body.namespace || requestedNamespace, DEFAULT_NAMESPACE);
+  const finalRole: Role = body.role === "reader" ? "reader" : "writer";
+  const read = [defaultNamespace];
+  const write = finalRole === "reader" ? [] : [defaultNamespace];
+  const del = finalRole === "reader" ? [] : [defaultNamespace];
   const cipher = await encryptTokenForAdmin(token, ctx.token, tokenHash);
   const id = crypto.randomUUID();
   const now = Date.now();
@@ -704,16 +706,31 @@ async function createToken(env: Env, ctx: AuthContext, body: any, role: Role = "
 async function updateToken(env: Env, id: string, body: any): Promise<Response> {
   const existing = await env.DB.prepare(`SELECT * FROM auth_tokens WHERE id = ?`).bind(id).first() as TokenRow | null;
   if (!existing) return json({ error: "Token not found" }, 404);
-  const frontNamespaces = body.namespaces || body.allowedNamespaces;
-  const defaultNamespace = normalizeNamespace(body.defaultNamespace || body.default_namespace || body.namespace || frontNamespaces?.[0], existing.default_namespace);
-  const role: Role = body.role === "admin" ? "admin" : body.role === "reader" ? "reader" : body.role === "writer" ? "writer" : "user";
-  const read = role === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.readNamespaces || body.read_namespaces || frontNamespaces, parseJsonArray(existing.read_namespaces, [defaultNamespace]));
-  const write = role === "admin" ? [ALL_NAMESPACES] : role === "reader" ? [] : normalizeNamespaceList(body.writeNamespaces || body.write_namespaces || frontNamespaces, parseJsonArray(existing.write_namespaces, [defaultNamespace]));
-  const del = role === "admin" ? [ALL_NAMESPACES] : normalizeNamespaceList(body.deleteNamespaces || body.delete_namespaces, parseJsonArray(existing.delete_namespaces, []));
+  if (existing.role === "admin") return forbidden("Admin token cannot be edited here");
+  const defaultNamespace = existing.default_namespace || DEFAULT_NAMESPACE;
+  const role: Role = body.role === "reader" ? "reader" : "writer";
+  const read = [defaultNamespace];
+  const write = role === "reader" ? [] : [defaultNamespace];
+  const del = role === "reader" ? [] : [defaultNamespace];
   await env.DB.prepare(
     `UPDATE auth_tokens SET label = ?, role = ?, default_namespace = ?, read_namespaces = ?, write_namespaces = ?, delete_namespaces = ? WHERE id = ?`
   ).bind(String(body.label || body.name || existing.label), role, defaultNamespace, JSON.stringify(read), JSON.stringify(write), JSON.stringify(del), id).run();
   return json({ ok: true });
+}
+
+async function deleteTokenAndNamespace(env: Env, id: string): Promise<Response> {
+  const existing = await env.DB.prepare(`SELECT * FROM auth_tokens WHERE id = ?`).bind(id).first() as TokenRow | null;
+  if (!existing) return json({ error: "Token not found" }, 404);
+  if (existing.role === "admin") return forbidden("Admin token cannot be deleted here");
+  const namespace = existing.default_namespace || DEFAULT_NAMESPACE;
+  const { results } = await env.DB.prepare(`SELECT vector_ids FROM entries WHERE namespace = ?`).bind(namespace).all();
+  const vectorIds = (results as Record<string, any>[])
+    .flatMap((row) => parseJsonArray(row.vector_ids as string))
+    .filter(Boolean);
+  await env.DB.prepare(`DELETE FROM entries WHERE namespace = ?`).bind(namespace).run();
+  await env.DB.prepare(`DELETE FROM auth_tokens WHERE id = ?`).bind(id).run();
+  if (vectorIds.length) await env.VECTORIZE.deleteByIds(vectorIds).catch((e) => console.error("Vectorize namespace delete failed:", e));
+  return json({ ok: true, deletedNamespace: namespace, deletedVectors: vectorIds.length });
 }
 
 async function reindexEntries(env: Env): Promise<Response> {
@@ -778,21 +795,18 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     if (auth.role !== "admin") return forbidden();
     let body: any;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-    return createToken(env, auth, body, body.role === "admin" ? "admin" : "user");
+    return createToken(env, auth, body, "user");
   }
-  const tokenPath = url.pathname.match(/^\/admin\/tokens\/([^/]+)(?:\/(revoke))?$/);
+  const tokenPath = url.pathname.match(/^\/admin\/tokens\/([^/]+)$/);
   if (tokenPath) {
     if (auth.role !== "admin") return forbidden();
     const id = tokenPath[1];
-    if ((request.method === "PUT" || request.method === "PATCH") && !tokenPath[2]) {
+    if (request.method === "PUT" || request.method === "PATCH") {
       let body: any;
       try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
       return updateToken(env, id, body);
     }
-    if ((request.method === "POST" && tokenPath[2] === "revoke") || (request.method === "DELETE" && !tokenPath[2])) {
-      await env.DB.prepare(`UPDATE auth_tokens SET revoked_at = ? WHERE id = ?`).bind(Date.now(), id).run();
-      return json({ ok: true });
-    }
+    if (request.method === "DELETE") return deleteTokenAndNamespace(env, id);
   }
   if (url.pathname === "/admin/reindex" && request.method === "POST") {
     if (auth.role !== "admin") return forbidden();
