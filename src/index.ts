@@ -28,7 +28,7 @@ const TOKEN_PREFIX = "sb_";
 const TOKEN_BYTES = 32;
 const NS_RE = /^(default|shared|codex|claude-code|mobile|project:[a-zA-Z0-9_-]+|[a-zA-Z0-9_-]{1,64})$/;
 
-type Role = "admin" | "user" | "reader" | "writer";
+type Role = "admin" | "reader" | "writer";
 
 interface TokenRow {
   id: string;
@@ -37,12 +37,8 @@ interface TokenRow {
   token_ciphertext: string | null;
   role: Role;
   default_namespace: string;
-  read_namespaces: string;
-  write_namespaces: string;
-  delete_namespaces: string;
   created_at: number;
   last_used_at: number | null;
-  revoked_at: number | null;
 }
 
 interface AuthContext {
@@ -52,9 +48,6 @@ interface AuthContext {
   label: string;
   role: Role;
   defaultNamespace: string;
-  readNamespaces: string[];
-  writeNamespaces: string[];
-  deleteNamespaces: string[];
   isLegacy: boolean;
 }
 
@@ -112,29 +105,7 @@ function normalizeNamespace(ns: unknown, fallback = DEFAULT_NAMESPACE): string {
   return NS_RE.test(value) ? value : fallback;
 }
 
-function normalizeNamespaceList(value: unknown, fallback: string[]): string[] {
-  const raw = Array.isArray(value)
-    ? value
-    : typeof value === "string"
-      ? value.split(",").map((v) => v.trim()).filter(Boolean)
-      : fallback;
-  const normalized = raw
-    .filter((v): v is string => typeof v === "string")
-    .map((v) => v.trim())
-    .filter((v) => v === ALL_NAMESPACES || NS_RE.test(v));
-  return normalized.length ? Array.from(new Set(normalized)) : fallback;
-}
-
-function namespaceAllowed(namespace: string, allowed: string[]): boolean {
-  return allowed.includes(ALL_NAMESPACES) || allowed.some((item) => {
-    if (item === namespace) return true;
-    if (item.endsWith(":*")) return namespace.startsWith(item.slice(0, -1));
-    return false;
-  });
-}
-
 function authInfo(ctx: AuthContext) {
-  const namespaces = ctx.writeNamespaces.includes(ALL_NAMESPACES) ? [ctx.defaultNamespace] : ctx.writeNamespaces;
   return {
     id: ctx.tokenId,
     name: ctx.label,
@@ -143,13 +114,22 @@ function authInfo(ctx: AuthContext) {
     isAdmin: ctx.role === "admin",
     defaultNamespace: ctx.defaultNamespace,
     namespace: ctx.defaultNamespace,
-    namespaces,
-    allowedNamespaces: namespaces,
-    readNamespaces: ctx.readNamespaces,
-    writeNamespaces: ctx.writeNamespaces,
-    deleteNamespaces: ctx.deleteNamespaces,
+    namespaces: [ctx.defaultNamespace],
+    allowedNamespaces: [ctx.defaultNamespace],
     isLegacy: ctx.isLegacy,
   };
+}
+
+function canReadNamespace(ctx: AuthContext, namespace: string): boolean {
+  return ctx.role === "admin" || namespace === ctx.defaultNamespace;
+}
+
+function canWriteNamespace(ctx: AuthContext, namespace: string): boolean {
+  return ctx.role === "admin" || (ctx.role === "writer" && namespace === ctx.defaultNamespace);
+}
+
+function canDeleteNamespace(ctx: AuthContext, namespace: string): boolean {
+  return canWriteNamespace(ctx, namespace);
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -224,27 +204,59 @@ async function initializeDatabase(env: Env): Promise<void> {
     await env.DB.exec(`CREATE INDEX IF NOT EXISTS idx_entries_source ON entries(source)`);
     await env.DB.exec(`CREATE INDEX IF NOT EXISTS idx_entries_namespace ON entries(namespace)`);
     await env.DB.exec(`CREATE INDEX IF NOT EXISTS idx_entries_namespace_created_at ON entries(namespace, created_at DESC)`);
+    await ensureAuthTokensSchema(env);
+  } catch (e) {
+    console.error("Database initialization error (non-fatal):", e);
+  }
+}
+
+async function ensureAuthTokensSchema(env: Env): Promise<void> {
+  await env.DB.exec(`
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      token_ciphertext TEXT,
+      role TEXT NOT NULL DEFAULT 'writer',
+      default_namespace TEXT NOT NULL DEFAULT 'default',
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
+  `);
+
+  const { results } = await env.DB.prepare(`PRAGMA table_info(auth_tokens)`).all();
+  const columns = (results as Record<string, any>[]).map((row) => String(row.name));
+  const expected = ["id", "label", "token_hash", "token_ciphertext", "role", "default_namespace", "created_at", "last_used_at"];
+  const hasOnlyExpectedColumns = columns.length === expected.length && expected.every((name) => columns.includes(name));
+
+  if (!hasOnlyExpectedColumns) {
+    const hasRevokedAt = columns.includes("revoked_at");
     await env.DB.exec(`
-      CREATE TABLE IF NOT EXISTS auth_tokens (
+      CREATE TABLE IF NOT EXISTS auth_tokens_new (
         id TEXT PRIMARY KEY,
         label TEXT NOT NULL,
         token_hash TEXT NOT NULL UNIQUE,
         token_ciphertext TEXT,
-        role TEXT NOT NULL DEFAULT 'user',
+        role TEXT NOT NULL DEFAULT 'writer',
         default_namespace TEXT NOT NULL DEFAULT 'default',
-        read_namespaces TEXT NOT NULL DEFAULT '["default"]',
-        write_namespaces TEXT NOT NULL DEFAULT '["default"]',
-        delete_namespaces TEXT NOT NULL DEFAULT '[]',
         created_at INTEGER NOT NULL,
-        last_used_at INTEGER,
-        revoked_at INTEGER
+        last_used_at INTEGER
       );
     `);
-    await env.DB.exec(`CREATE INDEX IF NOT EXISTS idx_auth_tokens_hash ON auth_tokens(token_hash)`);
-    await env.DB.exec(`CREATE INDEX IF NOT EXISTS idx_auth_tokens_default_namespace ON auth_tokens(default_namespace)`);
-  } catch (e) {
-    console.error("Database initialization error (non-fatal):", e);
+    const activeFilter = hasRevokedAt ? "WHERE revoked_at IS NULL" : "";
+    await env.DB.exec(`
+      INSERT OR REPLACE INTO auth_tokens_new (id, label, token_hash, token_ciphertext, role, default_namespace, created_at, last_used_at)
+      SELECT id, label, token_hash, token_ciphertext,
+        CASE WHEN role = 'admin' THEN 'admin' WHEN role = 'reader' THEN 'reader' ELSE 'writer' END,
+        default_namespace, created_at, last_used_at
+      FROM auth_tokens ${activeFilter};
+      DROP TABLE auth_tokens;
+      ALTER TABLE auth_tokens_new RENAME TO auth_tokens;
+    `);
   }
+
+  await env.DB.exec(`CREATE INDEX IF NOT EXISTS idx_auth_tokens_hash ON auth_tokens(token_hash)`);
+  await env.DB.exec(`CREATE INDEX IF NOT EXISTS idx_auth_tokens_default_namespace ON auth_tokens(default_namespace)`);
 }
 
 async function safeAlter(env: Env, sql: string): Promise<void> {
@@ -257,24 +269,18 @@ async function safeAlter(env: Env, sql: string): Promise<void> {
 }
 
 async function tokenTableHasRows(env: Env): Promise<boolean> {
-  const row = await env.DB.prepare(`SELECT COUNT(*) AS count FROM auth_tokens WHERE revoked_at IS NULL`).first() as any;
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS count FROM auth_tokens`).first() as any;
   return Number(row?.count || 0) > 0;
 }
 
 function rowToAuthContext(row: TokenRow, token: string, tokenHash: string): AuthContext {
-  const read = parseJsonArray(row.read_namespaces, [row.default_namespace]);
-  const write = parseJsonArray(row.write_namespaces, [row.default_namespace]);
-  const del = parseJsonArray(row.delete_namespaces, []);
   return {
     token,
     tokenHash,
     tokenId: row.id,
     label: row.label,
-    role: row.role === "admin" ? "admin" : row.role === "reader" ? "reader" : row.role === "writer" ? "writer" : "user",
+    role: row.role === "admin" ? "admin" : row.role === "reader" ? "reader" : "writer",
     defaultNamespace: row.default_namespace || DEFAULT_NAMESPACE,
-    readNamespaces: row.role === "admin" ? [ALL_NAMESPACES] : read,
-    writeNamespaces: row.role === "admin" ? [ALL_NAMESPACES] : write,
-    deleteNamespaces: row.role === "admin" ? [ALL_NAMESPACES] : del,
     isLegacy: false,
   };
 }
@@ -287,7 +293,7 @@ async function getAuthContext(request: Request, env: Env, options: { allowMissin
   const tokenHash = await sha256Hex(token);
   if (hasManagedTokens) {
     const row = await env.DB.prepare(
-      `SELECT * FROM auth_tokens WHERE token_hash = ? AND revoked_at IS NULL`
+      `SELECT * FROM auth_tokens WHERE token_hash = ?`
     ).bind(tokenHash).first() as TokenRow | null;
     if (!row) return null;
     await env.DB.prepare(`UPDATE auth_tokens SET last_used_at = ? WHERE id = ?`).bind(Date.now(), row.id).run();
@@ -302,9 +308,6 @@ async function getAuthContext(request: Request, env: Env, options: { allowMissin
       label: "Legacy Admin",
       role: "admin",
       defaultNamespace: DEFAULT_NAMESPACE,
-      readNamespaces: [ALL_NAMESPACES],
-      writeNamespaces: [ALL_NAMESPACES],
-      deleteNamespaces: [ALL_NAMESPACES],
       isLegacy: true,
     };
   }
@@ -314,7 +317,7 @@ async function getAuthContext(request: Request, env: Env, options: { allowMissin
 
 function requireWriteNamespace(ctx: AuthContext, requested?: unknown): string | Response {
   const namespace = normalizeNamespace(requested, ctx.defaultNamespace);
-  return namespaceAllowed(namespace, ctx.writeNamespaces) ? namespace : forbidden(`No write access to namespace: ${namespace}`);
+  return canWriteNamespace(ctx, namespace) ? namespace : forbidden(`No write access to namespace: ${namespace}`);
 }
 
 async function embed(text: string, env: Env): Promise<number[]> {
@@ -453,9 +456,9 @@ async function appendToEntry(
 async function readableNamespaces(env: Env, ctx: AuthContext, requestedNamespace?: string | null): Promise<string[]> {
   if (requestedNamespace) {
     const namespace = normalizeNamespace(requestedNamespace, ctx.defaultNamespace);
-    return namespaceAllowed(namespace, ctx.readNamespaces) ? [namespace] : [];
+    return canReadNamespace(ctx, namespace) ? [namespace] : [];
   }
-  if (!ctx.readNamespaces.includes(ALL_NAMESPACES)) return ctx.readNamespaces;
+  if (ctx.role !== "admin") return [ctx.defaultNamespace];
   const { results } = await env.DB.prepare(`SELECT DISTINCT namespace FROM entries ORDER BY namespace`).all();
   const namespaces = (results as Record<string, any>[]).map((row) => String(row.namespace || DEFAULT_NAMESPACE));
   return namespaces.length ? namespaces : [ctx.defaultNamespace];
@@ -464,7 +467,7 @@ async function readableNamespaces(env: Env, ctx: AuthContext, requestedNamespace
 async function requireReadableNamespaces(env: Env, ctx: AuthContext, requestedNamespace?: string | null): Promise<string[] | Response> {
   if (requestedNamespace) {
     const namespace = normalizeNamespace(requestedNamespace, ctx.defaultNamespace);
-    if (!namespaceAllowed(namespace, ctx.readNamespaces)) return forbidden(`No read access to namespace: ${namespace}`);
+    if (!canReadNamespace(ctx, namespace)) return forbidden(`No read access to namespace: ${namespace}`);
     return [namespace];
   }
   return readableNamespaces(env, ctx, requestedNamespace);
@@ -475,7 +478,7 @@ async function recallEntries(env: Env, ctx: AuthContext, query: string, topK: nu
   const values = await embed(query, env);
   const matches: VectorizeMatch[] = [];
   for (const namespace of readable) {
-    if (!namespaceAllowed(namespace, ctx.readNamespaces)) continue;
+    if (!canReadNamespace(ctx, namespace)) continue;
     const results = await env.VECTORIZE.query(values, { topK: topK * 3, returnMetadata: "all", namespace } as any);
     matches.push(...(results.matches as VectorizeMatch[]).map((m) => ({ ...m, namespace })));
   }
@@ -494,7 +497,7 @@ async function recallEntries(env: Env, ctx: AuthContext, query: string, topK: nu
   for (const candidate of candidates) {
     const parentId = ((candidate.metadata as any)?.parentId ?? candidate.id) as string;
     const namespace = candidate.namespace || ((candidate.metadata as any)?.namespace as string) || DEFAULT_NAMESPACE;
-    if (!namespaceAllowed(namespace, ctx.readNamespaces)) continue;
+    if (!canReadNamespace(ctx, namespace)) continue;
     let sql = `SELECT id, content, tags, source, namespace, created_at FROM entries WHERE id = ? AND namespace = ?`;
     const params: (string | number)[] = [parentId, namespace];
     if (tag) { sql += ` AND tags LIKE ?`; params.push(`%"${tag}"%`); }
@@ -539,13 +542,9 @@ async function listEntries(env: Env, ctx: AuthContext, n: number, tag?: string, 
 
 async function listVisibleNamespaces(env: Env, ctx: AuthContext): Promise<string[]> {
   const names = new Set<string>([ctx.defaultNamespace]);
-  if (ctx.readNamespaces.includes(ALL_NAMESPACES)) {
+  if (ctx.role === "admin") {
     const { results } = await env.DB.prepare(`SELECT DISTINCT namespace FROM entries ORDER BY namespace`).all();
     (results as Record<string, any>[]).forEach((row) => names.add(String(row.namespace || DEFAULT_NAMESPACE)));
-  } else {
-    ctx.readNamespaces.forEach((namespace) => {
-      if (!namespace.includes("*")) names.add(namespace);
-    });
   }
   return [...names].filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
@@ -589,7 +588,7 @@ function buildMcpServer(env: Env, ctx: AuthContext): McpServer {
     { id: z.string(), addition: z.string() },
     async ({ id, addition }) => {
       const row = await env.DB.prepare(`SELECT id, content, tags, source, namespace FROM entries WHERE id = ?`).bind(id).first() as Record<string, any> | null;
-      if (!row || !namespaceAllowed(row.namespace as string, ctx.writeNamespaces)) {
+      if (!row || !canWriteNamespace(ctx, row.namespace as string)) {
         return { content: [{ type: "text", text: `No writable entry found with ID: ${id}` }] };
       }
       const a = addition.trim();
@@ -631,7 +630,7 @@ function buildMcpServer(env: Env, ctx: AuthContext): McpServer {
     { id: z.string() },
     async ({ id }) => {
       const row = await env.DB.prepare(`SELECT namespace, vector_ids FROM entries WHERE id = ?`).bind(id).first() as Record<string, any> | null;
-      if (!row || !namespaceAllowed(row.namespace as string, ctx.deleteNamespaces)) {
+      if (!row || !canDeleteNamespace(ctx, row.namespace as string)) {
         return { content: [{ type: "text", text: `No deletable entry found with ID: ${id}` }] };
       }
       const vectorIds: string[] = parseJsonArray(row.vector_ids as string);
@@ -646,27 +645,18 @@ function buildMcpServer(env: Env, ctx: AuthContext): McpServer {
 
 function sanitizeTokenRow(row: TokenRow, adminToken?: string) {
   const namespace = row.default_namespace || DEFAULT_NAMESPACE;
-  const read = row.role === "admin" ? [ALL_NAMESPACES] : [namespace];
-  const write = row.role === "writer" ? [namespace] : row.role === "admin" ? [ALL_NAMESPACES] : [];
-  const del = row.role === "writer" ? [namespace] : row.role === "admin" ? [ALL_NAMESPACES] : [];
-  const namespaces = row.role === "admin" ? [ALL_NAMESPACES] : [namespace];
   return {
     id: row.id,
     name: row.label,
     label: row.label,
     role: row.role,
-    namespace: row.default_namespace,
-    namespaces,
-    allowedNamespaces: namespaces,
-    defaultNamespace: row.default_namespace,
-    readNamespaces: read,
-    writeNamespaces: write,
-    deleteNamespaces: del,
+    namespace,
+    namespaces: [namespace],
+    allowedNamespaces: [namespace],
+    defaultNamespace: namespace,
     createdAt: row.created_at,
     expiresAt: null,
-    revoked: Boolean(row.revoked_at),
     lastUsedAt: row.last_used_at,
-    revokedAt: row.revoked_at,
     tokenAvailable: Boolean(row.token_ciphertext),
     token: adminToken,
   };
@@ -683,23 +673,20 @@ async function adminListTokens(env: Env, ctx: AuthContext): Promise<Response> {
   return json({ tokens });
 }
 
-async function createToken(env: Env, ctx: AuthContext, body: any, role: Role = "user"): Promise<Response> {
+async function createToken(env: Env, ctx: AuthContext, body: any): Promise<Response> {
   const token = generateToken();
   const tokenHash = await sha256Hex(token);
   const frontNamespaces = body.namespaces || body.allowedNamespaces;
   const requestedNamespace = Array.isArray(frontNamespaces) ? frontNamespaces[0] : frontNamespaces;
   const defaultNamespace = normalizeNamespace(body.defaultNamespace || body.default_namespace || body.namespace || requestedNamespace, DEFAULT_NAMESPACE);
   const finalRole: Role = body.role === "reader" ? "reader" : "writer";
-  const read = [defaultNamespace];
-  const write = finalRole === "reader" ? [] : [defaultNamespace];
-  const del = finalRole === "reader" ? [] : [defaultNamespace];
   const cipher = await encryptTokenForAdmin(token, ctx.token, tokenHash);
   const id = crypto.randomUUID();
   const now = Date.now();
   await env.DB.prepare(
-    `INSERT INTO auth_tokens (id, label, token_hash, token_ciphertext, role, default_namespace, read_namespaces, write_namespaces, delete_namespaces, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, String(body.label || body.name || "New Token"), tokenHash, cipher, finalRole, defaultNamespace, JSON.stringify(read), JSON.stringify(write), JSON.stringify(del), now).run();
-  const record = { id, name: body.label || body.name || "New Token", label: body.label || body.name || "New Token", role: finalRole, defaultNamespace, namespace: defaultNamespace, namespaces: Array.from(new Set([...read, ...write, ...del])), readNamespaces: read, writeNamespaces: write, deleteNamespaces: del, createdAt: now, expiresAt: null, revoked: false };
+    `INSERT INTO auth_tokens (id, label, token_hash, token_ciphertext, role, default_namespace, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(id, String(body.label || body.name || "New Token"), tokenHash, cipher, finalRole, defaultNamespace, now).run();
+  const record = { id, name: body.label || body.name || "New Token", label: body.label || body.name || "New Token", role: finalRole, defaultNamespace, namespace: defaultNamespace, namespaces: [defaultNamespace], createdAt: now, expiresAt: null };
   return json({ ...record, token, tokenRecord: record }, 201);
 }
 
@@ -709,12 +696,9 @@ async function updateToken(env: Env, id: string, body: any): Promise<Response> {
   if (existing.role === "admin") return forbidden("Admin token cannot be edited here");
   const defaultNamespace = existing.default_namespace || DEFAULT_NAMESPACE;
   const role: Role = body.role === "reader" ? "reader" : "writer";
-  const read = [defaultNamespace];
-  const write = role === "reader" ? [] : [defaultNamespace];
-  const del = role === "reader" ? [] : [defaultNamespace];
   await env.DB.prepare(
-    `UPDATE auth_tokens SET label = ?, role = ?, default_namespace = ?, read_namespaces = ?, write_namespaces = ?, delete_namespaces = ? WHERE id = ?`
-  ).bind(String(body.label || body.name || existing.label), role, defaultNamespace, JSON.stringify(read), JSON.stringify(write), JSON.stringify(del), id).run();
+    `UPDATE auth_tokens SET label = ?, role = ?, default_namespace = ? WHERE id = ?`
+  ).bind(String(body.label || body.name || existing.label), role, defaultNamespace, id).run();
   return json({ ok: true });
 }
 
@@ -773,9 +757,9 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     const now = Date.now();
     const defaultNamespace = normalizeNamespace(body.defaultNamespace || body.namespace, DEFAULT_NAMESPACE);
     await env.DB.prepare(
-      `INSERT INTO auth_tokens (id, label, token_hash, token_ciphertext, role, default_namespace, read_namespaces, write_namespaces, delete_namespaces, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(id, String(body.label || body.name || "Admin"), tokenHash, cipher, "admin", defaultNamespace, JSON.stringify([ALL_NAMESPACES]), JSON.stringify([ALL_NAMESPACES]), JSON.stringify([ALL_NAMESPACES]), now).run();
-    return json({ id, token, name: body.label || body.name || "Admin", label: body.label || body.name || "Admin", role: "admin", isAdmin: true, defaultNamespace, namespace: defaultNamespace, namespaces: [defaultNamespace], readNamespaces: [ALL_NAMESPACES], writeNamespaces: [ALL_NAMESPACES], deleteNamespaces: [ALL_NAMESPACES] }, 201);
+      `INSERT INTO auth_tokens (id, label, token_hash, token_ciphertext, role, default_namespace, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(id, String(body.label || body.name || "Admin"), tokenHash, cipher, "admin", defaultNamespace, now).run();
+    return json({ id, token, name: body.label || body.name || "Admin", label: body.label || body.name || "Admin", role: "admin", isAdmin: true, defaultNamespace, namespace: defaultNamespace, namespaces: [defaultNamespace] }, 201);
   }
 
   const auth = await getAuthContext(request, env);
@@ -795,7 +779,7 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     if (auth.role !== "admin") return forbidden();
     let body: any;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-    return createToken(env, auth, body, "user");
+    return createToken(env, auth, body);
   }
   const tokenPath = url.pathname.match(/^\/admin\/tokens\/([^/]+)$/);
   if (tokenPath) {
@@ -841,7 +825,7 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
     if (!body.id?.trim() || !body.addition?.trim()) return json({ error: "id and addition are required" }, 400);
     const row = await env.DB.prepare(`SELECT id, content, tags, source, namespace FROM entries WHERE id = ?`).bind(body.id.trim()).first() as Record<string, any> | null;
-    if (!row || !namespaceAllowed(row.namespace as string, auth.writeNamespaces)) return forbidden("No write access to this entry");
+    if (!row || !canWriteNamespace(auth, row.namespace as string)) return forbidden("No write access to this entry");
     await appendToEntry(env, row.id as string, row.content as string, body.addition.trim(), parseJsonArray(row.tags as string), row.source as string, row.namespace as string);
     return json({ ok: true, id: row.id, namespace: row.namespace });
   }

@@ -20,14 +20,10 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
   label              TEXT NOT NULL,
   token_hash         TEXT NOT NULL UNIQUE,
   token_ciphertext   TEXT,
-  role               TEXT NOT NULL DEFAULT 'user',
+  role               TEXT NOT NULL DEFAULT 'writer',
   default_namespace  TEXT NOT NULL DEFAULT 'default',
-  read_namespaces    TEXT NOT NULL DEFAULT '["default"]',
-  write_namespaces   TEXT NOT NULL DEFAULT '["default"]',
-  delete_namespaces  TEXT NOT NULL DEFAULT '[]',
   created_at         INTEGER NOT NULL,
-  last_used_at       INTEGER,
-  revoked_at         INTEGER
+  last_used_at       INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_hash ON auth_tokens(token_hash);

@@ -2160,7 +2160,7 @@
     }
 
     async function loadVisibleNamespaces(identity) {
-      const defaults = identity.namespaces || identity.allowedNamespaces || identity.writeNamespaces || [];
+      const defaults = identity.namespaces || identity.allowedNamespaces || [];
       try {
         const res = await fetch(`${WORKER_URL}/namespaces`, { headers: authHeaders() });
         if (!res.ok) throw new Error();
