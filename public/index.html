@@ -1024,15 +1024,29 @@
       background: #eef7ef;
       color: #235d34;
       border-radius: 10px;
-      padding: 11px 12px;
+      padding: 12px;
       font-size: 12px;
       line-height: 1.45;
-      overflow-wrap: anywhere;
       margin-bottom: 12px;
     }
 
     .token-output.open {
       display: block;
+    }
+
+    .token-output-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .token-output-code {
+      flex: 1;
+      min-width: 0;
+      overflow-x: auto;
+      white-space: nowrap;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      user-select: all;
     }
 
     .btn-token {
@@ -1475,6 +1489,10 @@
         border-radius: 16px;
         max-width: 400px;
       }
+
+      .token-inner {
+        max-width: 560px;
+      }
     }
 
 
@@ -1775,10 +1793,7 @@
           <input type="hidden" id="token-edit-id">
           <label class="token-label"><span data-i18n="tokenName">名称</span><input class="token-input" id="token-name" type="text"></label>
           <label class="token-label"><span data-i18n="tokenRole">角色</span><select class="token-select" id="token-role"><option value="writer">writer</option><option value="admin">admin</option><option value="reader">reader</option></select></label>
-          <label class="token-label"><span data-i18n="tokenDefaultNamespace">默认命名空间</span><input class="token-input" id="token-default-namespace" type="text" placeholder="codex"></label>
-          <label class="token-label"><span data-i18n="tokenReadNamespaces">可读命名空间</span><input class="token-input" id="token-read-namespaces" type="text" placeholder="codex, shared, project:*"></label>
-          <label class="token-label"><span data-i18n="tokenWriteNamespaces">可写命名空间</span><input class="token-input" id="token-write-namespaces" type="text" placeholder="codex, project:*"></label>
-          <label class="token-label"><span data-i18n="tokenDeleteNamespaces">可删命名空间</span><input class="token-input" id="token-delete-namespaces" type="text" placeholder="codex"></label>
+          <label class="token-label"><span data-i18n="tokenNamespaces">命名空间</span><input class="token-input" id="token-namespaces" type="text" placeholder="codex, shared, project:*"></label>
           <div class="token-form-actions">
             <button class="btn-token" type="button" onclick="closeTokenForm()" data-i18n="cancel">取消</button>
             <button class="btn-token primary" type="button" onclick="saveToken()" id="token-save-btn" data-i18n="saveToken">保存 Token</button>
@@ -1856,12 +1871,12 @@
         tokenName: '名称',
         tokenRole: '角色',
         tokenNamespaces: '命名空间',
-        tokenDefaultNamespace: '默认命名空间',
-        tokenReadNamespaces: '可读命名空间',
-        tokenWriteNamespaces: '可写命名空间',
-        tokenDeleteNamespaces: '可删命名空间',
         saveToken: '保存 Token',
-        tokenCreated: token => `只显示一次：${token}`,
+        viewToken: '查看 Token',
+        copyToken: '复制',
+        tokenCopied: '已复制',
+        tokenUnavailable: '无法解密这个 Token。请确认正在使用创建它的管理员 Token。',
+        tokenCreated: token => `Token：${token}`,
         tokenSaved: 'Token 已保存。',
         tokenRevoked: 'Token 已撤销。',
         noTokens: '还没有管理 token。',
@@ -1948,12 +1963,12 @@
         tokenName: 'Name',
         tokenRole: 'Role',
         tokenNamespaces: 'Namespaces',
-        tokenDefaultNamespace: 'Default namespace',
-        tokenReadNamespaces: 'Read namespaces',
-        tokenWriteNamespaces: 'Write namespaces',
-        tokenDeleteNamespaces: 'Delete namespaces',
         saveToken: 'Save Token',
-        tokenCreated: token => `Shown once: ${token}`,
+        viewToken: 'View Token',
+        copyToken: 'Copy',
+        tokenCopied: 'Copied',
+        tokenUnavailable: 'Could not decrypt this token. Make sure you are using the admin token that created it.',
+        tokenCreated: token => `Token: ${token}`,
         tokenSaved: 'Token saved.',
         tokenRevoked: 'Token revoked.',
         noTokens: 'No admin tokens yet.',
@@ -2614,6 +2629,7 @@
           </div>
           <div class="token-actions">
             <button class="btn-token" onclick="openTokenForm('${escAttr(token.id)}')"><i class="ti ti-pencil"></i><span>${t('editToken')}</span></button>
+            <button class="btn-token" onclick="showTokenValue('${escAttr(token.id)}')" ${revoked || !token.token ? 'disabled' : ''}><i class="ti ti-eye"></i><span>${t('viewToken')}</span></button>
             <button class="btn-token danger" onclick="revokeToken('${escAttr(token.id)}')" ${revoked ? 'disabled' : ''}><i class="ti ti-ban"></i><span>${t('revokeToken')}</span></button>
           </div>`;
         list.appendChild(card);
@@ -2625,15 +2641,10 @@
       const token = adminTokens.find(t => String(t.id) === String(id));
       document.getElementById('token-edit-id').value = token?.id || '';
       const defaultNamespace = token?.defaultNamespace || token?.namespace || currentNamespace || 'default';
-      const read = token?.readNamespaces || token?.namespaces || token?.allowedNamespaces || [defaultNamespace];
-      const write = token?.writeNamespaces || (token?.role === 'reader' ? [] : [defaultNamespace]);
-      const del = token?.deleteNamespaces || [];
+      const namespaces = token?.namespaces || token?.allowedNamespaces || token?.readNamespaces || [defaultNamespace];
       document.getElementById('token-name').value = token?.label || token?.name || '';
       document.getElementById('token-role').value = token?.role || 'writer';
-      document.getElementById('token-default-namespace').value = defaultNamespace;
-      document.getElementById('token-read-namespaces').value = read.join(', ');
-      document.getElementById('token-write-namespaces').value = write.join(', ');
-      document.getElementById('token-delete-namespaces').value = del.join(', ');
+      document.getElementById('token-namespaces').value = namespaces.join(', ');
       document.getElementById('token-output').classList.remove('open');
       form.classList.add('open');
     }
@@ -2647,17 +2658,16 @@
       const id = document.getElementById('token-edit-id').value;
       const btn = document.getElementById('token-save-btn');
       const splitNamespaces = value => value.split(',').map(s => s.trim()).filter(Boolean);
-      const defaultNamespace = document.getElementById('token-default-namespace').value.trim() || 'default';
-      const readNamespaces = splitNamespaces(document.getElementById('token-read-namespaces').value || defaultNamespace);
-      const writeNamespaces = splitNamespaces(document.getElementById('token-write-namespaces').value || defaultNamespace);
-      const deleteNamespaces = splitNamespaces(document.getElementById('token-delete-namespaces').value || '');
+      const namespaces = splitNamespaces(document.getElementById('token-namespaces').value || 'default');
+      const role = document.getElementById('token-role').value;
+      const defaultNamespace = namespaces[0] || 'default';
       const payload = {
         label: document.getElementById('token-name').value.trim(),
-        role: document.getElementById('token-role').value,
+        role,
         defaultNamespace,
-        readNamespaces,
-        writeNamespaces,
-        deleteNamespaces
+        readNamespaces: namespaces,
+        writeNamespaces: role === 'reader' ? [] : namespaces,
+        deleteNamespaces: role === 'admin' ? ['*'] : []
       };
       btn.disabled = true; btn.textContent = t('saving');
       try {
@@ -2668,16 +2678,41 @@
         });
         if (!res.ok) throw new Error(t('serverError', res.status));
         const data = await res.json();
-        const output = document.getElementById('token-output');
         const rawToken = data.token || data.plaintext || data.secret || data.value;
-        output.textContent = rawToken ? t('tokenCreated', rawToken) : t('tokenSaved');
-        output.classList.add('open');
+        rawToken ? showTokenOutput(rawToken) : showTokenMessage(t('tokenSaved'));
         closeTokenForm();
         await loadTokens();
       } catch (e) {
         alert(e.message || t('somethingWrongShort'));
       } finally {
         btn.disabled = false; btn.textContent = t('saveToken');
+      }
+    }
+
+    function showTokenValue(id) {
+      const token = adminTokens.find(t => String(t.id) === String(id));
+      if (!token?.token) { showTokenMessage(t('tokenUnavailable')); return; }
+      showTokenOutput(token.token);
+    }
+
+    function showTokenOutput(value) {
+      const output = document.getElementById('token-output');
+      output.innerHTML = `<div class="token-output-row"><code class="token-output-code">${escHtml(value)}</code><button class="btn-token" type="button" onclick="copyTokenValue('${escAttr(value)}')"><i class="ti ti-copy"></i><span>${t('copyToken')}</span></button></div>`;
+      output.classList.add('open');
+    }
+
+    function showTokenMessage(message) {
+      const output = document.getElementById('token-output');
+      output.textContent = message;
+      output.classList.add('open');
+    }
+
+    async function copyTokenValue(value) {
+      try {
+        await navigator.clipboard.writeText(value);
+        showTokenMessage(t('tokenCopied'));
+      } catch {
+        showTokenOutput(value);
       }
     }
 
@@ -2690,8 +2725,7 @@
           body: JSON.stringify({ revoked: true })
         });
         if (!res.ok) throw new Error(t('serverError', res.status));
-        document.getElementById('token-output').textContent = t('tokenRevoked');
-        document.getElementById('token-output').classList.add('open');
+        showTokenMessage(t('tokenRevoked'));
         await loadTokens();
       } catch (e) {
         alert(e.message || t('somethingWrongShort'));
@@ -2709,8 +2743,7 @@
           body: JSON.stringify(withNamespace({}))
         });
         if (!res.ok) throw new Error(t('serverError', res.status));
-        document.getElementById('token-output').textContent = t('reindexStarted');
-        document.getElementById('token-output').classList.add('open');
+        showTokenMessage(t('reindexStarted'));
       } catch (e) {
         alert(e.message || t('somethingWrongShort'));
       } finally {
@@ -2754,7 +2787,7 @@
     document.getElementById('append-sheet').addEventListener('click', e => { if (e.target === document.getElementById('append-sheet')) closeAppend(); });
     document.getElementById('menu-sheet').addEventListener('click', e => { if (e.target === document.getElementById('menu-sheet')) closeMenu(); });
     document.getElementById('view-sheet').addEventListener('click', e => { if (e.target === document.getElementById('view-sheet')) closeView(); });
-    document.getElementById('token-sheet').addEventListener('click', e => { if (e.target === document.getElementById('token-sheet')) closeTokenSheet(); });
+    document.getElementById('token-sheet').addEventListener('click', e => { if (e.target === document.getElementById('token-sheet')) e.stopPropagation(); });
 
     function appendBrainBubble(container, text) {
       const row = document.createElement('div');
