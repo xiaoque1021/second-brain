@@ -1294,9 +1294,14 @@
 
     .sb-logo {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 10px;
-      padding: 6px 10px 24px;
+      padding: 6px 10px 18px;
+    }
+
+    .sb-logo>div:last-child {
+      flex: 1;
+      min-width: 0;
     }
 
     .sb-brand-name {
@@ -1428,6 +1433,21 @@
 
       #sidebar {
         display: flex;
+      }
+
+      #sidebar .identity-strip {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      #sidebar .identity-chip,
+      #sidebar .namespace-select {
+        width: 100%;
+        max-width: none;
+        height: 28px;
       }
 
       #topbar {
@@ -2101,13 +2121,14 @@
         const res = await fetch(`${WORKER_URL}/auth/me`, { headers: authHeaders() });
         if (!res.ok) throw new Error();
         currentIdentity = await res.json();
-        availableNamespaces = currentIdentity.namespaces || currentIdentity.allowedNamespaces || currentIdentity.writeNamespaces || [];
-        if (isAdmin() && (currentIdentity.readNamespaces || []).includes('*')) {
-          availableNamespaces = Array.from(new Set([currentIdentity.defaultNamespace || 'default', currentNamespace || '', ...availableNamespaces, 'default', 'shared', 'codex', 'claude-code', 'mobile'].filter(Boolean)));
-        }
+        availableNamespaces = await loadVisibleNamespaces(currentIdentity);
         if (!availableNamespaces.length && currentIdentity.namespace) availableNamespaces = [currentIdentity.namespace];
-        if (!currentNamespace) currentNamespace = currentIdentity.defaultNamespace || currentIdentity.namespace || availableNamespaces[0] || 'default';
-        if (!availableNamespaces.includes(currentNamespace)) availableNamespaces.unshift(currentNamespace);
+        const preferredNamespace = currentNamespace || currentIdentity.defaultNamespace || currentIdentity.namespace || availableNamespaces[0] || 'default';
+        if (!availableNamespaces.includes(preferredNamespace)) {
+          currentNamespace = availableNamespaces[0] || currentIdentity.defaultNamespace || currentIdentity.namespace || 'default';
+        } else {
+          currentNamespace = preferredNamespace;
+        }
         localStorage.setItem('sb_namespace', currentNamespace);
       } catch {
         currentIdentity = null;
@@ -2116,6 +2137,18 @@
       }
       renderIdentity();
       if (isAdmin()) loadTokens();
+    }
+
+    async function loadVisibleNamespaces(identity) {
+      const defaults = identity.namespaces || identity.allowedNamespaces || identity.writeNamespaces || [];
+      try {
+        const res = await fetch(`${WORKER_URL}/namespaces`, { headers: authHeaders() });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const namespaces = Array.isArray(data) ? data : (data.namespaces || []);
+        if (namespaces.length) return Array.from(new Set(namespaces.filter(Boolean)));
+      } catch { }
+      return Array.from(new Set([identity.defaultNamespace || identity.namespace || '', ...defaults].filter(Boolean)));
     }
 
     function renderIdentity() {

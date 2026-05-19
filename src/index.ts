@@ -537,6 +537,19 @@ async function listEntries(env: Env, ctx: AuthContext, n: number, tag?: string, 
   return results as Record<string, any>[];
 }
 
+async function listVisibleNamespaces(env: Env, ctx: AuthContext): Promise<string[]> {
+  const names = new Set<string>([ctx.defaultNamespace]);
+  if (ctx.readNamespaces.includes(ALL_NAMESPACES)) {
+    const { results } = await env.DB.prepare(`SELECT DISTINCT namespace FROM entries ORDER BY namespace`).all();
+    (results as Record<string, any>[]).forEach((row) => names.add(String(row.namespace || DEFAULT_NAMESPACE)));
+  } else {
+    ctx.readNamespaces.forEach((namespace) => {
+      if (!namespace.includes("*")) names.add(namespace);
+    });
+  }
+  return [...names].filter(Boolean).sort((a, b) => a.localeCompare(b));
+}
+
 function buildMcpServer(env: Env, ctx: AuthContext): McpServer {
   const server = new McpServer({ name: "second-brain", version: "1.0.0" });
 
@@ -752,6 +765,10 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
   if (!auth) return unauthorized();
 
   if (url.pathname === "/auth/me" && request.method === "GET") return json(authInfo(auth));
+
+  if (url.pathname === "/namespaces" && request.method === "GET") {
+    return json({ namespaces: await listVisibleNamespaces(env, auth) });
+  }
 
   if (url.pathname === "/admin/tokens" && request.method === "GET") {
     if (auth.role !== "admin") return forbidden();
