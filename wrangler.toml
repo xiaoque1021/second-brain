@@ -1,0 +1,26 @@
+name = "second-brain"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# AUTH_TOKEN is prompted during Deploy to Cloudflare flow
+# Schema auto-creates on first Worker request
+
+[[d1_databases]]
+binding = "DB"
+database_name = "second-brain-db"
+database_id = "d9a5be95-1d5f-48aa-bd57-ce4c0cf2c51d"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "second-brain-vectors"
+dimensions = 384
+metric = "cosine"
+# Created automatically by Deploy to Cloudflare button
+# Or manually: wrangler vectorize create second-brain-vectors --dimensions=384 --metric=cosine
+
+[ai]
+binding = "AI"
+
+[assets]
+directory = "./public"
