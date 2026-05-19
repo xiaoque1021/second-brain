@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8">
@@ -1026,6 +1026,30 @@
       color: #c0392b;
     }
 
+    .language-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-top: 0.5px solid var(--border);
+    }
+
+    .language-row i {
+      font-size: 20px;
+      color: var(--text-secondary);
+    }
+
+    .language-select {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      outline: none;
+      cursor: pointer;
+    }
+
     #sidebar {
       width: 240px;
       flex-shrink: 0;
@@ -1256,13 +1280,13 @@
       <div class="brain-logo">
         <img src="/icon-transparent.svg" width="36" height="36" alt="Second Brain">
       </div>
-      <h1>Second Brain</h1>
-      <p>Enter your Bearer token to connect to your personal memory layer.</p>
+      <h1 data-i18n="appName">Second Brain</h1>
+      <p data-i18n="authSubtitle">输入 Bearer token，连接你的个人记忆层。</p>
       <form class="field-group" onsubmit="connect(); return false;">
         <input type="text" name="username" value="user" autocomplete="username" style="display:none">
         <input type="url" id="auth-url" autocomplete="off" autocapitalize="none">
-        <input type="password" id="auth-token" placeholder="Bearer token" autocomplete="current-password">
-        <button id="auth-connect" type="submit">Connect</button>
+        <input type="password" id="auth-token" data-i18n-placeholder="bearerToken" placeholder="Bearer token" autocomplete="current-password">
+        <button id="auth-connect" type="submit" data-i18n="connect">连接</button>
       </form>
       <div id="auth-error"></div>
     </div>
@@ -1277,24 +1301,24 @@
           <img src="/icon-transparent.svg" width="20" height="20" alt="Second Brain">
         </div>
         <div>
-          <div class="sb-brand-name">Second Brain</div>
-          <div class="sb-brand-status" id="sb-status">always remembers</div>
+          <div class="sb-brand-name" data-i18n="appName">Second Brain</div>
+          <div class="sb-brand-status" id="sb-status">随时记得</div>
         </div>
       </div>
       <nav class="sb-nav">
         <button class="sb-tab active" id="sb-tab-recall" onclick="switchTab('recall')">
-          <i class="ti ti-search"></i><span>Recall</span>
+          <i class="ti ti-search"></i><span data-i18n="recall">回忆</span>
         </button>
         <button class="sb-tab" id="sb-tab-recent" onclick="switchTab('recent')">
-          <i class="ti ti-clock"></i><span>Recent</span>
+          <i class="ti ti-clock"></i><span data-i18n="recent">最近</span>
         </button>
         <button class="sb-tab" id="sb-tab-remember" onclick="switchTab('remember')">
-          <i class="ti ti-plus"></i><span>Remember</span>
+          <i class="ti ti-plus"></i><span data-i18n="remember">记录</span>
         </button>
       </nav>
       <div class="sb-footer">
         <button class="sb-footer-btn" onclick="openMenu()">
-          <i class="ti ti-settings"></i><span>Settings</span>
+          <i class="ti ti-settings"></i><span data-i18n="settings">设置</span>
         </button>
       </div>
     </div>
@@ -1305,8 +1329,8 @@
           <img src="/icon-transparent.svg" width="20" height="20" alt="Second Brain">
         </div>
         <div class="topbar-info">
-          <div class="topbar-name">Second Brain</div>
-          <div class="topbar-status" id="topbar-status">always remembers</div>
+          <div class="topbar-name" data-i18n="appName">Second Brain</div>
+          <div class="topbar-status" id="topbar-status">随时记得</div>
         </div>
         <button class="topbar-menu" onclick="openMenu()"><i class="ti ti-dots"></i></button>
       </div>
@@ -1316,34 +1340,31 @@
         <div class="screen active" id="screen-recall">
           <div id="recall-messages">
             <div class="brain-cards-wrapper" id="recall-welcome">
-              <div class="bubble brain">Ask me anything about what you've stored. I'll find it.</div>
+              <div class="bubble brain" data-i18n="recallWelcome">问我任何你存过的内容，我会帮你找出来。</div>
             </div>
           </div>
           <div class="filter-bar" style="padding-bottom:0;">
             <div class="filter-inner">
               <i class="ti ti-tag" style="color:var(--text-tertiary);font-size:13px;flex-shrink:0;"></i>
               <select class="filter-field" id="tag-filter-recall" onchange="onTagChange(this.value)">
-                <option value="">All tags</option>
+                <option value="" data-i18n="allTags">所有标签</option>
               </select>
             </div>
           </div>
           <div class="suggestions-row">
-            <button class="suggestion-pill" onclick="sendSuggestion('What am I working on?')">What am I working
-              on?</button>
-            <button class="suggestion-pill" onclick="sendSuggestion('What did I decide recently?')">What did I decide
-              recently?</button>
-            <button class="suggestion-pill" onclick="sendSuggestion('Show my tasks')">Show my tasks</button>
-            <button class="suggestion-pill" onclick="sendSuggestion('What are my goals?')">What are my goals?</button>
-            <button class="suggestion-pill" onclick="sendSuggestion('What ideas do I have?')">What ideas do I
-              have?</button>
+            <button class="suggestion-pill" data-i18n="suggestWorking" onclick="sendSuggestion(t('suggestWorking'))">我最近在做什么？</button>
+            <button class="suggestion-pill" data-i18n="suggestDecisions" onclick="sendSuggestion(t('suggestDecisions'))">我最近做了什么决定？</button>
+            <button class="suggestion-pill" data-i18n="suggestTasks" onclick="sendSuggestion(t('suggestTasks'))">显示我的任务</button>
+            <button class="suggestion-pill" data-i18n="suggestGoals" onclick="sendSuggestion(t('suggestGoals'))">我的目标是什么？</button>
+            <button class="suggestion-pill" data-i18n="suggestIdeas" onclick="sendSuggestion(t('suggestIdeas'))">我有什么想法？</button>
           </div>
           <div class="input-bar">
             <div class="input-inner">
               <button id="recall-clear-btn" class="refresh-btn" onclick="clearRecall()" style="display:none;"
-                title="Clear Chat">
+                data-i18n-title="clearChat" title="清空对话">
                 <i class="ti ti-trash"></i>
               </button>
-              <textarea class="input-field" id="recall-input" placeholder="Ask your brain..." rows="1"
+              <textarea class="input-field" id="recall-input" data-i18n-placeholder="askBrain" placeholder="问问你的大脑..." rows="1"
                 onkeydown="handleRecallKey(event)" oninput="autoResize(this)"></textarea>
               <button class="send-btn" onclick="sendRecall()"><i class="ti ti-arrow-up"></i></button>
             </div>
@@ -1353,13 +1374,13 @@
 
         <div class="screen" id="screen-recent">
           <div id="recent-list">
-            <div class="empty-state"><i class="ti ti-clock"></i><span>Loading memories...</span></div>
+            <div class="empty-state"><i class="ti ti-clock"></i><span data-i18n="loadingMemories">正在加载记忆...</span></div>
           </div>
           <div class="filter-bar">
             <div class="filter-inner">
               <i class="ti ti-tag" style="color:var(--text-tertiary);font-size:13px;flex-shrink:0;"></i>
               <select class="filter-field" id="tag-filter-recent" onchange="onTagChange(this.value)">
-                <option value="">All tags</option>
+                <option value="" data-i18n="allTags">所有标签</option>
               </select>
               <button class="refresh-btn" id="refresh-btn" onclick="loadRecent()"><i class="ti ti-refresh"></i></button>
             </div>
@@ -1370,18 +1391,17 @@
         <div class="screen" id="screen-remember">
           <div id="remember-messages">
             <div class="bubble-row brain">
-              <div class="bubble brain">What do you want to remember? Use <span
-                  style="color:var(--text-secondary)">#tags</span> to organize.</div>
+              <div class="bubble brain" data-i18n-html="rememberWelcome">你想记住什么？用 <span style="color:var(--text-secondary)">#标签</span> 来整理。</div>
             </div>
           </div>
           <div class="input-bar">
-            <div class="input-hint">Tip: add <span class="hint-tags">#tags</span> anywhere in your message</div>
+            <div class="input-hint" data-i18n-html="rememberHint">提示：可以在消息任意位置添加 <span class="hint-tags">#标签</span></div>
             <div class="input-inner">
               <button id="remember-clear-btn" class="refresh-btn" onclick="clearRemember()" style="display:none;"
-                title="Clear Chat">
+                data-i18n-title="clearChat" title="清空对话">
                 <i class="ti ti-trash"></i>
               </button>
-              <textarea class="input-field" id="remember-input" placeholder="Tell your brain something..." rows="1"
+              <textarea class="input-field" id="remember-input" data-i18n-placeholder="tellBrain" placeholder="告诉你的大脑一些事..." rows="1"
                 onkeydown="handleRememberKey(event)" oninput="autoResize(this)"></textarea>
               <button class="send-btn" onclick="sendRemember()"><i class="ti ti-arrow-up"></i></button>
             </div>
@@ -1391,13 +1411,13 @@
 
       <div id="navbar">
         <button class="nav-tab active" id="tab-recall" onclick="switchTab('recall')">
-          <i class="ti ti-search"></i><span>Recall</span>
+          <i class="ti ti-search"></i><span data-i18n="recall">回忆</span>
         </button>
         <button class="nav-tab" id="tab-recent" onclick="switchTab('recent')">
-          <i class="ti ti-clock"></i><span>Recent</span>
+          <i class="ti ti-clock"></i><span data-i18n="recent">最近</span>
         </button>
         <button class="nav-tab" id="tab-remember" onclick="switchTab('remember')">
-          <i class="ti ti-plus"></i><span>Remember</span>
+          <i class="ti ti-plus"></i><span data-i18n="remember">记录</span>
         </button>
       </div>
     </div>
@@ -1406,11 +1426,11 @@
 
   <div id="confirm-dialog">
     <div class="confirm-sheet">
-      <h3>Forget this memory?</h3>
-      <p>This can't be undone. The memory will be removed from your brain.</p>
+      <h3 data-i18n="forgetTitle">删除这条记忆？</h3>
+      <p data-i18n="forgetBody">此操作无法撤销。这条记忆会从你的大脑中移除。</p>
       <div class="confirm-actions">
-        <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
-        <button class="btn-delete" onclick="confirmForget()">Forget</button>
+        <button class="btn-cancel" onclick="closeConfirm()" data-i18n="cancel">取消</button>
+        <button class="btn-delete" onclick="confirmForget()" data-i18n="forget">删除</button>
       </div>
     </div>
   </div>
@@ -1418,14 +1438,14 @@
 
   <div id="append-sheet">
     <div class="append-inner">
-      <h3>Add an update</h3>
+      <h3 data-i18n="appendTitle">添加更新</h3>
       <div class="append-context" id="append-context-preview"></div>
       <div class="append-input-wrap">
-        <textarea id="append-textarea" placeholder="What's changed or new?" rows="3"></textarea>
+        <textarea id="append-textarea" data-i18n-placeholder="appendPlaceholder" placeholder="有什么变化或新增内容？" rows="3"></textarea>
       </div>
       <div class="append-actions">
-        <button class="btn-append-cancel" onclick="closeAppend()">Cancel</button>
-        <button class="btn-append-save" id="append-save-btn" onclick="saveAppend()">Update</button>
+        <button class="btn-append-cancel" onclick="closeAppend()" data-i18n="cancel">取消</button>
+        <button class="btn-append-save" id="append-save-btn" onclick="saveAppend()" data-i18n="update">更新</button>
       </div>
     </div>
   </div>
@@ -1433,14 +1453,14 @@
   <div id="view-sheet">
     <div class="view-inner">
       <div class="view-header">
-        <h3>Memory</h3>
+        <h3 data-i18n="memory">记忆</h3>
         <button class="btn-close-icon" onclick="closeView()"><i class="ti ti-x"></i></button>
       </div>
       <div class="view-content" id="view-content-text"></div>
       <div class="view-tags" id="view-tags-container"></div>
       <div class="view-actions">
-        <button class="btn-view-append" id="view-btn-append"><i class="ti ti-writing"></i> Append</button>
-        <button class="btn-view-forget" id="view-btn-forget"><i class="ti ti-trash"></i> Forget</button>
+        <button class="btn-view-append" id="view-btn-append"><i class="ti ti-writing"></i> <span data-i18n="append">追加</span></button>
+        <button class="btn-view-forget" id="view-btn-forget"><i class="ti ti-trash"></i> <span data-i18n="forget">删除</span></button>
       </div>
     </div>
   </div>
@@ -1448,12 +1468,19 @@
 
   <div id="menu-sheet">
     <div class="menu-inner">
-      <h3>Second Brain</h3>
+      <h3 data-i18n="appName">Second Brain</h3>
+      <div class="language-row">
+        <i class="ti ti-language"></i>
+        <select class="language-select" id="language-select" onchange="setLanguage(this.value)" aria-label="Language">
+          <option value="zh-CN">中文</option>
+          <option value="en">English</option>
+        </select>
+      </div>
       <button class="menu-item" onclick="closeMenu(); switchTab('recent')">
-        <i class="ti ti-clock"></i> View all memories
+        <i class="ti ti-clock"></i> <span data-i18n="viewAll">查看所有记忆</span>
       </button>
       <button class="menu-item danger" onclick="logout()">
-        <i class="ti ti-logout"></i> Disconnect
+        <i class="ti ti-logout"></i> <span data-i18n="disconnect">断开连接</span>
       </button>
     </div>
   </div>
@@ -1462,8 +1489,166 @@
     let WORKER_URL = '', AUTH_TOKEN = '', allEntries = [];
     let pendingForgetId = null, pendingAppendId = null, pendingForgetCard = null;
     let currentTab = 'recall', selectedTag = '';
+    let currentLanguage = 'zh-CN';
+
+    const I18N = {
+      'zh-CN': {
+        appName: 'Second Brain',
+        authSubtitle: '输入 Bearer token，连接你的个人记忆层。',
+        bearerToken: 'Bearer token',
+        connect: '连接',
+        connecting: '连接中...',
+        recall: '回忆',
+        recent: '最近',
+        remember: '记录',
+        settings: '设置',
+        alwaysRemembers: '随时记得',
+        memoryStored: count => `已存 ${count} 条记忆`,
+        recallWelcome: '问我任何你存过的内容，我会帮你找出来。',
+        allTags: '所有标签',
+        suggestWorking: '我最近在做什么？',
+        suggestDecisions: '我最近做了什么决定？',
+        suggestTasks: '显示我的任务',
+        suggestGoals: '我的目标是什么？',
+        suggestIdeas: '我有什么想法？',
+        clearChat: '清空对话',
+        askBrain: '问问你的大脑...',
+        loadingMemories: '正在加载记忆...',
+        loading: '加载中...',
+        loadFailed: '无法加载记忆。',
+        noMemories: '还没有记忆。<br>用“记录”添加一些内容。',
+        rememberWelcome: '你想记住什么？用 <span style="color:var(--text-secondary)">#标签</span> 来整理。',
+        rememberHint: '提示：可以在消息任意位置添加 <span class="hint-tags">#标签</span>',
+        tellBrain: '告诉你的大脑一些事...',
+        forgetTitle: '删除这条记忆？',
+        forgetBody: '此操作无法撤销。这条记忆会从你的大脑中移除。',
+        cancel: '取消',
+        forget: '删除',
+        forgetting: '删除中...',
+        appendTitle: '添加更新',
+        appendPlaceholder: '有什么变化或新增内容？',
+        update: '更新',
+        saving: '保存中...',
+        append: '追加',
+        memory: '记忆',
+        viewAll: '查看所有记忆',
+        disconnect: '断开连接',
+        fillFields: '请填写地址和 token。',
+        invalidToken: 'Token 无效',
+        serverError: status => `服务器错误：${status}`,
+        connectFailed: '无法连接。',
+        invalidResponse: '响应格式无效',
+        mcpError: 'MCP 错误',
+        nothingFound: '我没找到匹配的内容。换个说法，或去“最近”里看看。',
+        somethingWrong: '出错了。检查连接后再试一次。',
+        somethingWrongShort: '出错了，请再试一次。',
+        sourceCount: count => `${count} 条来源`,
+        appendAction: '追加',
+        duplicateStored: '我已经存过非常相似的内容了，这次已跳过以避免重复。',
+        stored: '已存好，我会记住。',
+        taggedAs: '标签：',
+        appendFailed: message => `追加失败：${message}`,
+        forgetFailed: message => `无法删除：${message}`,
+        today: '今天',
+        yesterday: '昨天',
+        locale: 'zh-CN'
+      },
+      en: {
+        appName: 'Second Brain',
+        authSubtitle: 'Enter your Bearer token to connect to your personal memory layer.',
+        bearerToken: 'Bearer token',
+        connect: 'Connect',
+        connecting: 'Connecting...',
+        recall: 'Recall',
+        recent: 'Recent',
+        remember: 'Remember',
+        settings: 'Settings',
+        alwaysRemembers: 'always remembers',
+        memoryStored: count => `${count} memor${count === 1 ? 'y' : 'ies'} stored`,
+        recallWelcome: "Ask me anything about what you've stored. I'll find it.",
+        allTags: 'All tags',
+        suggestWorking: 'What am I working on?',
+        suggestDecisions: 'What did I decide recently?',
+        suggestTasks: 'Show my tasks',
+        suggestGoals: 'What are my goals?',
+        suggestIdeas: 'What ideas do I have?',
+        clearChat: 'Clear Chat',
+        askBrain: 'Ask your brain...',
+        loadingMemories: 'Loading memories...',
+        loading: 'Loading...',
+        loadFailed: 'Could not load memories.',
+        noMemories: 'No memories yet.<br>Use Remember to add some.',
+        rememberWelcome: 'What do you want to remember? Use <span style="color:var(--text-secondary)">#tags</span> to organize.',
+        rememberHint: 'Tip: add <span class="hint-tags">#tags</span> anywhere in your message',
+        tellBrain: 'Tell your brain something...',
+        forgetTitle: 'Forget this memory?',
+        forgetBody: "This can't be undone. The memory will be removed from your brain.",
+        cancel: 'Cancel',
+        forget: 'Forget',
+        forgetting: 'Forgetting...',
+        appendTitle: 'Add an update',
+        appendPlaceholder: "What's changed or new?",
+        update: 'Update',
+        saving: 'Saving...',
+        append: 'Append',
+        memory: 'Memory',
+        viewAll: 'View all memories',
+        disconnect: 'Disconnect',
+        fillFields: 'Please fill in both fields.',
+        invalidToken: 'Invalid token',
+        serverError: status => `Server error: ${status}`,
+        connectFailed: 'Could not connect.',
+        invalidResponse: 'Invalid response',
+        mcpError: 'MCP error',
+        nothingFound: "I couldn't find anything matching that. Try different words or check Recent.",
+        somethingWrong: 'Something went wrong. Check your connection and try again.',
+        somethingWrongShort: 'Something went wrong. Try again.',
+        sourceCount: count => `${count} source${count === 1 ? '' : 's'}`,
+        appendAction: 'Append',
+        duplicateStored: 'I already have something very similar stored. Skipped to avoid duplicates.',
+        stored: "Stored. I'll remember that.",
+        taggedAs: 'Tagged as:',
+        appendFailed: message => `Append failed: ${message}`,
+        forgetFailed: message => `Could not forget: ${message}`,
+        today: 'Today',
+        yesterday: 'Yesterday',
+        locale: 'en-US'
+      }
+    };
+
+    function t(key, ...args) {
+      const value = (I18N[currentLanguage] || I18N['zh-CN'])[key] ?? I18N.en[key] ?? key;
+      return typeof value === 'function' ? value(...args) : value;
+    }
+
+    function setLanguage(lang) {
+      currentLanguage = I18N[lang] ? lang : 'zh-CN';
+      localStorage.setItem('sb_lang', currentLanguage);
+      document.documentElement.lang = currentLanguage;
+      const languageSelect = document.getElementById('language-select');
+      if (languageSelect) languageSelect.value = currentLanguage;
+      applyTranslations();
+      loadTags();
+      renderRecent(allEntries);
+      updateStatus();
+    }
+
+    function applyTranslations() {
+      document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+      document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+      document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+      const saveBtn = document.getElementById('append-save-btn');
+      if (saveBtn && !saveBtn.disabled) saveBtn.textContent = t('update');
+      const forgetBtn = document.querySelector('#confirm-dialog .btn-delete');
+      if (forgetBtn && !forgetBtn.disabled) forgetBtn.textContent = t('forget');
+    }
 
     function init() {
+      currentLanguage = localStorage.getItem('sb_lang') || 'zh-CN';
+      applyTranslations();
+      const languageSelect = document.getElementById('language-select');
+      if (languageSelect) languageSelect.value = currentLanguage;
       // Auto-populate URL from the current page origin (UI is hosted on the same Worker)
       const origin = window.location.origin;
       document.getElementById('auth-url').value = origin;
@@ -1478,17 +1663,17 @@
       const tok = document.getElementById('auth-token').value.trim();
       const err = document.getElementById('auth-error');
       const btn = document.getElementById('auth-connect');
-      if (!url || !tok) { err.textContent = 'Please fill in both fields.'; return; }
-      btn.textContent = 'Connecting...'; btn.disabled = true; err.textContent = '';
+      if (!url || !tok) { err.textContent = t('fillFields'); return; }
+      btn.textContent = t('connecting'); btn.disabled = true; err.textContent = '';
       try {
         const res = await fetch(`${url}/list?n=1`, { headers: { 'Authorization': `Bearer ${tok}` } });
-        if (res.status === 401) throw new Error('Invalid token');
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        if (res.status === 401) throw new Error(t('invalidToken'));
+        if (!res.ok) throw new Error(t('serverError', res.status));
         localStorage.setItem('sb_url', url); localStorage.setItem('sb_token', tok);
         WORKER_URL = url; AUTH_TOKEN = tok; showApp();
       } catch (e) {
-        err.textContent = e.message || 'Could not connect.';
-        btn.textContent = 'Connect'; btn.disabled = false;
+        err.textContent = e.message || t('connectFailed');
+        btn.textContent = t('connect'); btn.disabled = false;
       }
     }
 
@@ -1505,7 +1690,7 @@
         ['tag-filter-recent', 'tag-filter-recall'].forEach(id => {
           const sel = document.getElementById(id);
           if (!sel) return;
-          sel.innerHTML = '<option value="">All tags</option>';
+          sel.innerHTML = `<option value="">${t('allTags')}</option>`;
           tags.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t; opt.textContent = t;
@@ -1534,6 +1719,8 @@
       document.getElementById('auth-url').value = '';
       document.getElementById('auth-token').value = '';
       document.getElementById('auth-error').textContent = '';
+      document.getElementById('auth-connect').textContent = t('connect');
+      document.getElementById('auth-connect').disabled = false;
     }
 
     function switchTab(tab) {
@@ -1552,7 +1739,7 @@
         const res = await fetch(`${WORKER_URL}/list?n=1000`, { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
         const data = await res.json();
         const count = Array.isArray(data) ? data.length : 0;
-        const text = count === 0 ? 'always remembers' : `${count} memor${count === 1 ? 'y' : 'ies'} stored`;
+        const text = count === 0 ? t('alwaysRemembers') : t('memoryStored', count);
         document.getElementById('topbar-status').textContent = text;
         const sb = document.getElementById('sb-status');
         if (sb) sb.textContent = text;
@@ -1567,9 +1754,9 @@
       });
       const text = await res.text();
       const match = text.match(/data: ({.+})/s);
-      if (!match) throw new Error('Invalid response');
+      if (!match) throw new Error(t('invalidResponse'));
       const json = JSON.parse(match[1]);
-      if (json.error) throw new Error(json.error.message || 'MCP error');
+      if (json.error) throw new Error(json.error.message || t('mcpError'));
       return json.result?.content?.[0]?.text ?? '';
     }
 
@@ -1607,7 +1794,7 @@
         const result = await apiMcp('recall', { query, topK: 5, ...(selectedTag ? { tag: selectedTag } : {}) });
         loadingEl.remove();
         if (!result || result.includes('Nothing found')) {
-          appendBrainBubble(msgs, "I couldn't find anything matching that. Try different words or check Recent.");
+          appendBrainBubble(msgs, t('nothingFound'));
         } else {
           const entries = parseRecallResult(result);
           const answerBubble = document.createElement('div');
@@ -1652,7 +1839,7 @@
           const sourcesToggle = document.createElement('div');
           sourcesToggle.className = 'sources-toggle';
           sourcesToggle.innerHTML = `<button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'flex' : 'none'">
-            <i class="ti ti-files"></i> ${entries.length} source${entries.length === 1 ? '' : 's'}
+            <i class="ti ti-files"></i> ${t('sourceCount', entries.length)}
           </button>
           <div class="brain-cards-wrapper" style="display:none"></div>`;
           entries.forEach(e => sourcesToggle.querySelector('.brain-cards-wrapper').appendChild(makeRecallCard(e)));
@@ -1661,7 +1848,7 @@
         }
       } catch {
         loadingEl.remove();
-        appendBrainBubble(msgs, 'Something went wrong. Check your connection and try again.');
+        appendBrainBubble(msgs, t('somethingWrong'));
       }
       msgs.scrollTop = msgs.scrollHeight;
     }
@@ -1701,9 +1888,9 @@
       <div class="card-tags">${entry.tags.map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')}</div>
       <div class="card-actions">
         ${entry.id
-          ? `<button class="card-action-btn" onclick="openAppend('${escAttr(entry.id)}', '${escAttr(entry.content.slice(0, 80))}')"><i class="ti ti-writing"></i> Append</button>
-             <button class="card-action-btn" onclick="openConfirm('${escAttr(entry.id)}', this)"><i class="ti ti-x"></i> Forget</button>`
-          : `<button class="card-action-btn" onclick="openAppendFromContent('${escAttr(entry.content)}')"><i class="ti ti-writing"></i> Append</button>`
+          ? `<button class="card-action-btn" onclick="openAppend('${escAttr(entry.id)}', '${escAttr(entry.content.slice(0, 80))}')"><i class="ti ti-writing"></i> ${t('appendAction')}</button>
+             <button class="card-action-btn" onclick="openConfirm('${escAttr(entry.id)}', this)"><i class="ti ti-x"></i> ${t('forget')}</button>`
+          : `<button class="card-action-btn" onclick="openAppendFromContent('${escAttr(entry.content)}')"><i class="ti ti-writing"></i> ${t('appendAction')}</button>`
         }
       </div>
     </div>`;
@@ -1715,12 +1902,12 @@
       const list = document.getElementById('recent-list');
       const btn = document.getElementById('refresh-btn');
       btn.classList.add('spinning');
-      list.innerHTML = `<div class="empty-state"><i class="ti ti-clock"></i><span>Loading...</span></div>`;
+      list.innerHTML = `<div class="empty-state"><i class="ti ti-clock"></i><span>${t('loading')}</span></div>`;
       try {
         allEntries = await apiList(50);
         renderRecent(allEntries); updateStatus(); loadTags();
       } catch {
-        list.innerHTML = `<div class="empty-state"><i class="ti ti-wifi-off"></i><span>Could not load memories.</span></div>`;
+        list.innerHTML = `<div class="empty-state"><i class="ti ti-wifi-off"></i><span>${t('loadFailed')}</span></div>`;
       }
       btn.classList.remove('spinning');
     }
@@ -1736,14 +1923,14 @@
     function renderRecent(entries) {
       const list = document.getElementById('recent-list');
       if (!entries.length) {
-        list.innerHTML = `<div class="empty-state"><i class="ti ti-brain"></i><span>No memories yet.<br>Use Remember to add some.</span></div>`;
+        list.innerHTML = `<div class="empty-state"><i class="ti ti-brain"></i><span>${t('noMemories')}</span></div>`;
         return;
       }
       const groups = {}, now = new Date();
       const today = toDateStr(now), yesterday = toDateStr(new Date(now - 86400000));
       entries.forEach(entry => {
         const d = new Date(entry.created_at), ds = toDateStr(d);
-        const label = ds === today ? 'Today' : ds === yesterday ? 'Yesterday' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const label = ds === today ? t('today') : ds === yesterday ? t('yesterday') : d.toLocaleDateString(t('locale'), { month: 'short', day: 'numeric' });
         if (!groups[label]) groups[label] = [];
         groups[label].push(entry);
       });
@@ -1772,8 +1959,8 @@
     <div class="card-footer">
       <div class="card-tags">${tags.map(t => `<span class="tag-chip">${escHtml(t)}</span>`).join('')}</div>
       <div class="card-actions">
-        <button class="card-action-btn" onclick="openAppend('${escAttr(entry.id)}', '${escAttr(entry.content.slice(0, 80))}')"><i class="ti ti-writing"></i> Append</button>
-        <button class="card-action-btn" onclick="openConfirm('${escAttr(entry.id)}', this)"><i class="ti ti-x"></i> Forget</button>
+        <button class="card-action-btn" onclick="openAppend('${escAttr(entry.id)}', '${escAttr(entry.content.slice(0, 80))}')"><i class="ti ti-writing"></i> ${t('appendAction')}</button>
+        <button class="card-action-btn" onclick="openConfirm('${escAttr(entry.id)}', this)"><i class="ti ti-x"></i> ${t('forget')}</button>
       </div>
     </div>`;
       card.querySelector('.card-content').onclick = () => openView({ id: entry.id, content: entry.content, tags }, card);
@@ -1803,13 +1990,13 @@
         const result = await apiCapture(content || raw, tags, 'web-ui');
         loadingEl.remove();
         if (result.duplicate) {
-          appendBrainBubble(msgs, "I already have something very similar stored. Skipped to avoid duplicates.");
+          appendBrainBubble(msgs, t('duplicateStored'));
         } else {
-          appendBrainBubble(msgs, "Stored. I'll remember that.");
+          appendBrainBubble(msgs, t('stored'));
           if (tags.length) {
             const confirmEl = document.createElement('div');
             confirmEl.className = 'confirm-block';
-            confirmEl.innerHTML = `<div class="confirm-line"><i class="ti ti-circle-check"></i> Tagged as:</div><div class="confirm-tags">${tags.map(t => `<span class="confirm-tag">${escHtml(t)}</span>`).join('')}</div>`;
+            confirmEl.innerHTML = `<div class="confirm-line"><i class="ti ti-circle-check"></i> ${t('taggedAs')}</div><div class="confirm-tags">${tags.map(t => `<span class="confirm-tag">${escHtml(t)}</span>`).join('')}</div>`;
             msgs.appendChild(confirmEl);
           }
           updateStatus();
@@ -1817,7 +2004,7 @@
         document.getElementById('remember-clear-btn').style.display = 'flex';
       } catch {
         loadingEl.remove();
-        appendBrainBubble(msgs, 'Something went wrong. Try again.');
+        appendBrainBubble(msgs, t('somethingWrongShort'));
       }
       msgs.scrollTop = msgs.scrollHeight;
     }
@@ -1835,13 +2022,13 @@
       const addition = document.getElementById('append-textarea').value.trim();
       if (!addition || !pendingAppendId) return;
       const btn = document.getElementById('append-save-btn');
-      btn.disabled = true; btn.textContent = 'Saving...';
+      btn.disabled = true; btn.textContent = t('saving');
       try {
         await apiMcp('append', { id: pendingAppendId, addition });
         closeAppend(); loadRecent(); updateStatus();
       } catch (e) {
-        btn.disabled = false; btn.textContent = 'Update';
-        alert('Append failed: ' + e.message);
+        btn.disabled = false; btn.textContent = t('update');
+        alert(t('appendFailed', e.message));
       }
     }
 
@@ -1859,7 +2046,7 @@
       const idToForget = pendingForgetId;
       const cardElement = pendingForgetCard;
       const btn = document.querySelector('#confirm-dialog .btn-delete');
-      if (btn) { btn.disabled = true; btn.textContent = 'Forgetting...'; }
+      if (btn) { btn.disabled = true; btn.textContent = t('forgetting'); }
 
       try {
         await apiMcp('forget', { id: idToForget });
@@ -1872,9 +2059,9 @@
         allEntries = allEntries.filter(e => e.id !== idToForget);
         updateStatus();
       } catch (e) {
-        alert('Could not forget: ' + e.message);
+        alert(t('forgetFailed', e.message));
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Forget'; }
+        if (btn) { btn.disabled = false; btn.textContent = t('forget'); }
       }
     }
 
@@ -1919,7 +2106,7 @@
     function appendUserBubble(container, text) {
       const row = document.createElement('div');
       row.className = 'bubble-row user';
-      const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const time = new Date().toLocaleTimeString(t('locale'), { hour: 'numeric', minute: '2-digit' });
       row.innerHTML = `<div><div class="bubble user">${escHtml(text)}</div><div class="bubble-time">${time}</div></div>`;
       container.appendChild(row);
     }
@@ -1933,12 +2120,12 @@
     function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 80) + 'px'; }
     function clearRemember() {
       const msgs = document.getElementById('remember-messages');
-      msgs.innerHTML = `<div class="bubble-row brain"><div class="bubble brain">What do you want to remember? Use <span style="color:var(--text-secondary)">#tags</span> to organize.</div></div>`;
+      msgs.innerHTML = `<div class="bubble-row brain"><div class="bubble brain">${t('rememberWelcome')}</div></div>`;
       document.getElementById('remember-clear-btn').style.display = 'none';
     }
     function clearRecall() {
       const msgs = document.getElementById('recall-messages');
-      msgs.innerHTML = `<div class="brain-cards-wrapper" id="recall-welcome"><div class="bubble brain">Ask me anything about what you've stored. I'll find it.</div></div>`;
+      msgs.innerHTML = `<div class="brain-cards-wrapper" id="recall-welcome"><div class="bubble brain">${t('recallWelcome')}</div></div>`;
       document.getElementById('recall-clear-btn').style.display = 'none';
     }
     function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
